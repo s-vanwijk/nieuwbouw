@@ -104,6 +104,9 @@ body.tour #dock{opacity:0;pointer-events:none}
 #joyKnob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(238,241,236,.25);border:1px solid rgba(238,241,236,.5)}
 #legend{position:fixed;z-index:10;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(80px + env(safe-area-inset-bottom,0px));padding:10px 12px;font-size:12px;color:var(--ink-2);display:grid;gap:4px;max-width:260px}
 #legend b{color:var(--ink);font-weight:600}
+@media (max-width:1400px){ #dock .lbl{display:none} #dock .btn{padding:7px 9px} #dock .sep{margin:4px 0} }
+body.editing #dock, body:has(#fbPanel:not([hidden])) #dock{left:calc(50% - 190px)}
+@media (max-width:1100px){ body.editing #dock, body:has(#fbPanel:not([hidden])) #dock{left:50%} }
 @media (max-width:720px){
   #minimap{width:132px;height:132px}
   #brand canvas{width:auto;height:32px}
@@ -157,6 +160,28 @@ body.picking #stage canvas{cursor:crosshair}
 .pin.done span{background:var(--leaf)}
 .pin.new span{background:#fff}
 @media (max-width:720px){ #fbPanel{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:55%} }
+
+/* aanpassen / catalogus */
+#cfgPanel{position:fixed;z-index:14;top:calc(14px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));width:min(380px,calc(100vw - 32px));max-height:calc(100% - 110px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;background:var(--glass-2);animation:slideIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+#cfgPanel header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:14px 14px 6px}
+#cfgPanel h2{margin:2px 0 0;font-size:18px;font-stretch:112%;text-wrap:balance}
+.cfg-tools{display:flex;gap:6px;align-items:center;padding:0 14px 10px;flex-wrap:wrap}
+#cfgPick{flex:1;min-width:0;appearance:none;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;color:var(--ink)}
+#cfgPick option{background:#141a18}
+#cfgBody{overflow-y:auto;padding:4px 14px 10px;display:grid;gap:14px;min-height:0;border-top:1px solid var(--line)}
+.cfg-prop h3{margin:8px 0 8px;font-family:var(--f-mono);font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.cfg-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.cfg-opt{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:9px;padding:9px 9px 8px;display:grid;justify-items:start;gap:6px;text-align:left;font-size:12.5px;line-height:1.25;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.cfg-opt:hover{background:rgba(255,255,255,.07);transform:translateY(-1px)}
+.cfg-opt[aria-pressed="true"]{border-color:var(--amp);background:rgba(242,165,65,.12)}
+.cfg-opt .sw{width:100%;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,.18)}
+.cfg-opt i{font-style:normal;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.cfg-empty{margin:10px 0;font-size:13px;line-height:1.5;color:var(--ink-2)}
+#cfgPanel footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
+#cfgPanel footer .fb-status{margin:0;width:100%}
+body.editing #stage canvas{cursor:pointer}
+@media (max-width:720px){ #cfgPanel{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:52%} }
 @media (prefers-reduced-motion:reduce){ .lb,#caption,#loader{transition:none} }
 </style>
 </head>
@@ -216,6 +241,12 @@ body.picking #stage canvas{cursor:crosshair}
   <div class="fb-filter" role="group" aria-label="Filter"><button class="btn" data-ff="open" aria-pressed="true">Open</button><button class="btn" data-ff="done" aria-pressed="false">Verwerkt</button><button class="btn" data-ff="all" aria-pressed="false">Alles</button></div>
   <ol id="fbList"></ol>
 </aside>
+<aside id="cfgPanel" class="pnl" hidden aria-label="Aanpassen">
+  <header><div><div class="eyebrow" id="cfgRoom"></div><h2 id="cfgTitle">Aanpassen</h2></div><button class="btn" id="cfgClose" aria-label="Aanpassen sluiten">✕</button></header>
+  <div class="cfg-tools"><label class="lbl" for="cfgPick">Element</label><select id="cfgPick"></select><button class="btn ghost" id="cfgView" hidden>Ga erheen</button></div>
+  <div id="cfgBody"></div>
+  <footer><span id="cfgSum"></span><button class="btn ghost" id="cfgReset" hidden>Terug naar tekening</button><span id="cfgSave" class="fb-status"></span></footer>
+</aside>
 <div id="fbPick" class="pnl" hidden><span>Klik in het model op de plek waar je opmerking over gaat.</span><button class="btn ghost" id="fbPickCancel">Annuleren</button></div>
 <form id="fbForm" class="pnl" hidden>
   <div class="eyebrow">Nieuwe opmerking</div>
@@ -258,6 +289,10 @@ body.picking #stage canvas{cursor:crosshair}
     <button class="btn" data-time="dusk" aria-pressed="false">Avond</button>
   </div>
   <div class="sep"></div>
+  <div class="grp" role="group" aria-label="Kwaliteit"><span class="lbl">Kwaliteit</span><button class="btn" data-q="snel" aria-pressed="true">Snel</button><button class="btn" data-q="mooi" aria-pressed="false">Mooi</button></div>
+  <div class="sep"></div>
+  <button class="btn" id="cfgBtn" aria-pressed="false" aria-controls="cfgPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Aanpassen</button>
   <button class="btn" id="fbBtn" aria-expanded="false" aria-controls="fbPanel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Feedback<span class="cnt" id="fbCount"></span></button>
   <div class="sep"></div>
@@ -303,10 +338,10 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 /* ---------- renderer ---------- */
 const stage = $('#stage');
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-const PR = Math.min(devicePixelRatio, lowGPU ? 1.5 : 2);
-renderer.setPixelRatio(PR);
+const PR = Math.min(devicePixelRatio, lowGPU ? 1.5 : 1.75); const PR0 = Math.min(PR, 1.25);
+renderer.setPixelRatio(PR0);
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMapping = THREE.AgXToneMapping;
 renderer.toneMappingExposure = 0.62;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -372,6 +407,7 @@ function buildTextures() {
   T.leafRow = tex(drawLeaves(91, 88, 112, null, 1500), 1 / 0.9);
   T.leafSolid = tex(drawLeaves(92, 88, 112, '#1f3a1a', 900), 1);
   T.leafTree = tex(drawLeaves(93, 32, 95, null, 1100), 1);
+  { const pm = pix(512, (x, y, i) => { const v = 238 + (n[i % n.length] - .5) * 10; return [v, v, v + 2]; }); const g = pm.g; g.strokeStyle = 'rgba(120,120,125,.35)'; for (let k = 0; k < 14; k++) { g.lineWidth = rr(0.6, 2.2); g.beginPath(); let x = rr(0, 512), y = 0; g.moveTo(x, y); while (y < 512) { x += rr(-25, 25); y += rr(15, 40); g.lineTo(x, y); } g.stroke(); } T.marble = tex(pm.c, 1 / 1.2); }
   T.panelR = T.panel.clone(); T.panelR.center.set(0.5, 0.5); T.panelR.rotation = Math.PI / 2; T.panelR.needsUpdate = true;
   T.panelBumpR = T.panelBump.clone(); T.panelBumpR.center.set(0.5, 0.5); T.panelBumpR.rotation = Math.PI / 2; T.panelBumpR.needsUpdate = true;
   // riet (dakbedekking luifel): stro in lagen
@@ -385,7 +421,7 @@ function buildTextures() {
   T.sect = tex(p.c, 0.5);
   // gevlinderd beton (3 m)
   n = tnoise(512, 3, 6, 11); const n2 = tnoise(512, 24, 2, 12);
-  p = pix(512, (x, y, i) => { const v = 158 + (n[i] - .5) * 46 + (n2[i] - .5) * 14 + (rnd() - .5) * 8; return [v + 2, v, v - 4]; });
+  p = pix(512, (x, y, i) => { const v = 190 + (n[i] - .5) * 34 + (n2[i] - .5) * 10 + (rnd() - .5) * 6; return [v, v, v - 2]; });
   T.concrete = tex(p.c, 1 / 3);
   // eiken vloer (2 m), planken 0,25 m
   n = tnoise(512, 4, 5, 21);
@@ -465,9 +501,9 @@ function buildMaterials() {
   defMat('roof', { map: T.panelR, bumpMap: T.panelBumpR, bumpScale: 1.4, color: 0xe2e6e8, roughness: 0.32, metalness: 0.55, side: THREE.DoubleSide });
   defMat('sect', { map: T.sect, color: 0xe9ecee, roughness: 0.4, metalness: 0.4 });
   defMat('trim', { color: 0x2c3134, roughness: 0.45, metalness: 0.6 });
-  defMat('plaster', { color: 0xf1f0ec, roughness: 0.9 });
+  defMat('plaster', { color: 0xf6f6f4, roughness: 0.85 });
   defMat('accentWall', { color: 0x3f5a48, roughness: 0.85 });
-  defMat('concrete', { map: T.concrete, color: 0xffffff, roughness: 0.42, metalness: 0.05 });
+  defMat('concrete', { map: T.concrete, color: 0xffffff, roughness: 0.26, metalness: 0.0, envMapIntensity: 1.2 });
   defMat('wood', { map: T.wood, color: 0xffffff, roughness: 0.5 });
   defMat('tile', { map: T.tile, color: 0xffffff, roughness: 0.3 });
   defMat('ceil', { map: T.ceil, color: 0xffffff, roughness: 0.95 });
@@ -485,6 +521,20 @@ function buildMaterials() {
   defMat('fabric', { color: 0x4d6b55, roughness: 0.95 });
   defMat('fabric2', { color: 0x8a8f93, roughness: 0.95 });
   defMat('sanitary', { color: 0xffffff, roughness: 0.12 });
+  defMat('walnut', { map: T.wood, color: 0x7a5236, roughness: 0.5 });
+  defMat('tableWhite', { color: 0xf3f2ee, roughness: 0.3 });
+  defMat('anthracite', { color: 0x2d3033, roughness: 0.45, metalness: 0.1 });
+  defMat('concreteTop', { map: T.concrete, color: 0xc9c6c0, roughness: 0.35 });
+  defMat('marble', { map: T.marble, color: 0xffffff, roughness: 0.15 });
+  defMat('chrome', { color: 0xdfe3e6, roughness: 0.12, metalness: 1.0 });
+  defMat('fabricBlack', { color: 0x222426, roughness: 0.95 });
+  defMat('fabricOker', { color: 0xb58a3a, roughness: 0.95 });
+  defMat('fabricBlue', { color: 0x2f4f78, roughness: 0.95 });
+  defMat('tileDark', { map: T.tile, color: 0x55585b, roughness: 0.35 });
+  defMat('pourWhite', { color: 0xecebe7, roughness: 0.22, envMapIntensity: 1.2 });
+  defMat('feltGreen', { color: 0x3f5a48, roughness: 1 });
+  defMat('zinc', { color: 0x4a4f54, roughness: 0.4, metalness: 0.7, side: THREE.DoubleSide });
+  defMat('sedum', { map: T.leafSolid, color: 0x9bbf6a, roughness: 1, side: THREE.DoubleSide });
   defMat('inox', { color: 0xd4d9dc, roughness: 0.22, metalness: 0.95, side: THREE.DoubleSide });
   defMat('brush', { color: 0x2a3036, roughness: 1 });
   defMat('blue', { color: 0x2b5fb3, roughness: 0.35, metalness: 0.2 });
@@ -516,7 +566,19 @@ function buildMaterials() {
   defMat('pole', { color: 0x9aa0a4, roughness: 0.4, metalness: 0.7 }, { clip: false });
   defMat('streetlamp', { color: 0x222222, emissive: 0xffd9a0, emissiveIntensity: 0 }, { clip: false, cast: false });
 }
-function addGeo(key, g) { batches.get(key).geos.push(g); }
+let CAP = null; // als een element wordt opgebouwd, gaat alle geometrie naar dat element in plaats van naar de vaste batches
+function addGeo(key, g) { if (CAP) { (CAP.geos[key] ||= []).push(g); return; } batches.get(key).geos.push(g); }
+function capture(fn) { const prev = CAP; CAP = { geos: {}, cols: [], extra: [] }; try { fn(); } finally { const r = CAP; CAP = prev; capture.last = r; } return capture.last; }
+function groupFromCapture(cap) {
+  const grp = new THREE.Group();
+  for (const [key, gs] of Object.entries(cap.geos)) {
+    const b = batches.get(key); const list = gs.map(g => { let q = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(q.attributes)) if (!['position', 'normal', 'uv'].includes(k)) q.deleteAttribute(k); if (!q.attributes.normal) q.computeVertexNormals(); if (!q.attributes.uv) q.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(q.attributes.position.count * 2), 2)); return q; });
+    const merged = mergeGeometries(list, false); worldUV(merged);
+    const m = new THREE.Mesh(merged, b.mat); m.castShadow = b.cast; m.receiveShadow = b.receive; m.renderOrder = b.order; grp.add(m);
+  }
+  for (const e of cap.extra) grp.add(e);
+  return grp;
+}
 
 const colliders = [], walkables = [], planLines = [];
 function box(key, x0, y0, z0, x1, y1, z1, o = {}) {
@@ -525,7 +587,7 @@ function box(key, x0, y0, z0, x1, y1, z1, o = {}) {
   const g = new THREE.BoxGeometry(bx - ax, bz - az, by - ay);
   g.translate((ax + bx) / 2, (az + bz) / 2, -(ay + by) / 2);
   if (key) addGeo(key, g);
-  if (o.col) colliders.push({ x0: ax, y0: ay, x1: bx, y1: by, z0: az, z1: bz, active: true });
+  if (o.col) { const c = { x0: ax, y0: ay, x1: bx, y1: by, z0: az, z1: bz, active: true }; colliders.push(c); if (CAP) CAP.cols.push(c); }
   if (o.walk) walkables.push({ x0: ax, y0: ay, x1: bx, y1: by, top: bz });
 }
 const _m4 = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0), _upX = new THREE.Vector3(1, 0, 0);
@@ -613,7 +675,7 @@ function wall(key, x1, y1, x2, y2, z0, z1, t, ops = [], o = {}) {
       const tt = t + 0.1; if (hor) box('trim', a - 0.1, c - tt / 2, oz1, b + 0.1, c + tt / 2, oz1 + 0.12); else box('trim', c - tt / 2, a - 0.1, oz1, c + tt / 2, b + 0.1, oz1 + 0.12);
     }
   }
-  if (o.plan !== false) planLines.push({ hor, A, B, c, ops, lvl: o.lvl ?? (z0 > 2.5 ? 1 : 0), glass: key === 'glass', ext: !!o.ext, z0, z1 });
+  if (o.plan !== false && !CAP) planLines.push({ hor, A, B, c, ops, lvl: o.lvl ?? (z0 > 2.5 ? 1 : 0), glass: key === 'glass', ext: !!o.ext, z0, z1 });
 }
 // glazed partition with mullions
 function glassWall(x1, y1, x2, y2, z0, z1, ops = [], lvl = 0) {
@@ -657,7 +719,7 @@ function autoDoor(hor, c, a, b, zTop) {
     if (hor) grp.position.set(home, 0, -c); else grp.position.set(c, 0, -home);
     scene.add(grp); leaves.push({ grp, home, dir: s === 0 ? -1 : 1 });
   }
-  const col = hor ? { x0: a, x1: b, y0: c - 0.1, y1: c + 0.1, z0: 0, z1: zTop, active: true } : { x0: c - 0.1, x1: c + 0.1, y0: a, y1: b, z0: 0, z1: zTop, active: true };
+  const col = hor ? { x0: a, x1: b, y0: c - 0.1, y1: c + 0.1, z0: 0, z1: zTop, active: true, door: true } : { x0: c - 0.1, x1: c + 0.1, y0: a, y1: b, z0: 0, z1: zTop, active: true, door: true };
   colliders.push(col);
   autoDoors.push({ hor, c, a, b, w, leaves, col, open: 0, cx: hor ? (a + b) / 2 : c, cy: hor ? c : (a + b) / 2 });
 }
@@ -669,7 +731,7 @@ function hygArm(x, y, z, len) {
   const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len, 16), M.inox); tube.rotation.z = Math.PI / 2; tube.position.x = len / 2; tube.castShadow = true; piv.add(tube);
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 16), M.inox); piv.add(hub);
   scene.add(piv);
-  const col = { x0: x, x1: x + len, y0: y - 0.05, y1: y + 0.05, z0: z - 0.1, z1: z + 0.1, active: true }; colliders.push(col);
+  const col = { x0: x, x1: x + len, y0: y - 0.05, y1: y + 0.05, z0: z - 0.1, z1: z + 0.1, active: true, door: true }; colliders.push(col);
   hyg = { piv, col, open: 0, cx: x + len / 2, cy: y };
 }
 function updateHyg(dt) {
@@ -745,8 +807,14 @@ function rack(x0, y0, x1, y1, h, levels, z = 0) {
   colliders.push({ x0, y0, x1, y1, z0: z, z1: z + h, active: true });
 }
 function palletStack(x, y, n = 2, mat = 'carton') { for (let i = 0; i < n; i++) { box('pallet', x - 0.6, y - 0.4, i * 0.9, x + 0.6, y + 0.4, i * 0.9 + 0.14); box(mat, x - 0.55, y - 0.35, i * 0.9 + 0.14, x + 0.55, y + 0.35, i * 0.9 + 0.84); } colliders.push({ x0: x - 0.6, y0: y - 0.4, x1: x + 0.6, y1: y + 0.4, z0: 0, z1: n * 0.9, active: true }); }
+// moderne lijnverlichting: lange smalle lichtlijnen in het plafond
 function ledGrid(x0, y0, x1, y1, z = 2.995, sp = 2.4) {
-  for (let x = x0 + sp / 2; x < x1 - 0.3; x += sp) for (let y = y0 + sp / 2; y < y1 - 0.3; y += sp) box('led', x - 0.3, y - 0.3, z - 0.012, x + 0.3, y + 0.3, z);
+  for (let y = y0 + sp / 2; y < y1 - 0.3; y += sp) { box('black', x0 + 0.5, y - 0.06, z - 0.02, x1 - 0.5, y + 0.06, z); box('led', x0 + 0.55, y - 0.04, z - 0.024, x1 - 0.55, y + 0.04, z - 0.02); }
+}
+// eiken lattenwand (verticale latten)
+function slatWall(axis, c, a, b, z0, z1, face = 1) {
+  for (let t = a; t < b - 0.04; t += 0.1) { if (axis === 'x') box('oak', c, t, z0, c + face * 0.045, t + 0.045, z1); else box('oak', t, c, z0, t + 0.045, c + face * 0.045, z1); }
+  if (axis === 'x') box('black', c - face * 0.0, a, z0, c + face * 0.01, b, z1); else box('black', a, c, z0, b, c + face * 0.01, z1);
 }
 function pendant(x0, y0, x1, y1, z) { // linear pendant luminaire
   box('black', x0, y0, z, x1, y1, z + 0.06); box('led', x0 + 0.02, y0 + 0.02, z - 0.008, x1 - 0.02, y1 - 0.02, z);
@@ -785,7 +853,7 @@ function canvasPlane(w, h, draw, pos, rotY, opts = {}) {
   const m = opts.emissive ? new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: opts.emissive, roughness: 0.3, transparent: !!opts.transparent })
     : new THREE.MeshStandardMaterial({ map: t, transparent: !!opts.transparent, roughness: 0.5, metalness: 0.2 });
   m.clippingPlanes = CLIP;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); mesh.position.copy(pos); mesh.rotation.y = rotY; scene.add(mesh); return mesh;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); mesh.position.copy(pos); mesh.rotation.y = rotY; if (CAP) CAP.extra.push(mesh); else scene.add(mesh); return mesh;
 }
 function drawScreen(title, sub) {
   return (g, w, h) => {
@@ -811,7 +879,7 @@ function buildBuilding() {
   // --- vloeren
   for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) box('concrete', r[0], r[1], -0.25, r[2], r[3], 0.0);
   const fl = (k, x0, y0, x1, y1, z = 0) => box(k, x0, y0, z, x1, y1, z + 0.008);
-  fl('wood', 3.5, 16.05, 8.6, 21.4); fl('wood', 10.2, 8, 16, 13.3); fl('wood', 19.9, 8, 25, 16); fl('wood', 25.1, 16, 40, 24);
+  fl('wood', 3.5, 16.05, 8.6, 21.4); 
   fl('tile', 8.6, 16, 11.8, 21.4); fl('tile', 10.2, 13.3, 16, 16.1); fl('tile', 11.8, 16.1, 16, 21.4); fl('tile', 19.9, 19.2, 23.8, 21.4);
   fl('stone', 16, 8, 19.8, 11.8);
 
@@ -821,13 +889,14 @@ function buildBuilding() {
   wall('panel', 10.3, 0, 10.3, 8, 0, R0.e, ST, [[0.25, 3.75, 0, 4.2, 'sect'], [4.25, 7.75, 0, 4.2, 'sect']], ext); // laad- en losdeuren
   wall('panel', 10.3, 8, 25, 8, 0, EAVE, ST, [
     [16.1, 17.0, 0.05, 2.9, 'win'], [17.0, 18.8, 0, 2.6, 'auto'], [18.8, 19.7, 0.05, 2.9, 'win'], // entree
-    [16.1, 19.7, 3.1, 6.6, 'win']                         // glas tot boven
+    [16.1, 19.7, 3.1, 6.6, 'win'],                        // glas tot boven
+    [10.6, 15.8, 0, EAVE, 'slot'], [20.0, 24.9, 0, EAVE, 'slot'] // aanpasbare gevelvlakken (kantine, ontvangst)
   ], ext);
-  wall('panel', 25, 8, 25, 16, 0, EAVE, ST, [], ext);
-  wall('panel', 25, 16, 40, 16, 0, EAVE, ST, [], ext);
-  wall('panel', 40, 16, 40, 24, 0, EAVE, ST, [[22.95, 23.9, FL1, 5.4, 'door']], ext);                    // nooddeur B2 naar buitentrap
+  wall('panel', 25, 8, 25, 16, 0, EAVE, ST, [[8.4, 15.6, 0, EAVE, 'slot']], ext);
+  wall('panel', 25, 16, 40, 16, 0, EAVE, ST, [[25.6, 39.4, 0, EAVE, 'slot']], ext);
+  wall('panel', 40, 16, 40, 24, 0, EAVE, ST, [[16.4, 22.7, 0, EAVE, 'slot'], [22.95, 23.9, FL1, 5.4, 'door']], ext);                    // nooddeur B2 naar buitentrap
   wall('panel', 0, 24, 40, 24, 0, EAVE, ST, [[12.9, 14.9, 0, 2.6, 'auto'], [25.4, 26.4, 0, 2.3, 'door'], [30.4, 31.4, 0, 2.3, 'door']], ext);
-  wall('panel', 0, 0, 0, 8, 0, R0.e, ST, [], ext); wall('panel', 0, 8, 0, 24, 0, EAVE, ST, [], ext);
+  wall('panel', 0, 0, 0, 8, 0, R0.e, ST, [], ext); wall('panel', 0, 8, 0, 24, 0, EAVE, ST, [[9, 23, 0, EAVE, 'slot']], ext);
   // plint
   box('trim', -0.14, -0.14, 0, 10.44, 0, 0.35); box('trim', 10.3, -0.14, 0, 10.44, 8, 0.35); box('trim', 10.3, 7.86, 0, 16.0, 8.14, 0.35);
   box('trim', -0.14, 0, 0, 0, 24, 0.35); box('trim', 25, 8, 0, 25.14, 16, 0.35); box('trim', 25, 15.86, 0, 40, 16.14, 0.35); box('trim', 40, 16, 0, 40.14, 24, 0.35);
@@ -853,7 +922,6 @@ function buildBuilding() {
   // --- verdiepingsvloeren (+3200): opslag 0.20 en vloer 1.01/1.02 + bordes
   const slab = (x0, y0, x1, y1) => { box('concrete', x0, y0, CEIL + 0.02, x1, y1, FL1, { walk: true }); box('ceil', x0, y0, CEIL, x1, y1, CEIL + 0.02); };
   slab(3.3, 8, 16, 21.4); slab(19.6, 16, 40, 24); slab(18.0, 21.6, 19.6, 24);
-  box('wood', 19.6, 16, FL1, 40, 24, FL1 + 0.01);
   box('trim', 3.3, 21.3, CEIL - 0.02, 16, 21.4, FL1 + 0.04); box('trim', 15.9, 8, CEIL - 0.02, 16, 21.4, FL1 + 0.04); box('trim', 19.6, 15.95, CEIL - 0.02, 25, 16.05, FL1 + 0.04);
 
   // --- binnenwanden begane grond (h = 3000)
@@ -919,7 +987,7 @@ function buildBuilding() {
   table(4.6, 19.6, 7.6, 21.0); chair(5.3, 19.2, 'n'); chair(6.9, 19.2, 'n'); box('black', 5.2, 20.5, 0.75, 5.9, 20.55, 1.15); box('black', 6.4, 20.5, 0.75, 7.1, 20.55, 1.15);
   table(4.4, 16.6, 6.0, 17.6); chairsAround(4.4, 16.6, 6.0, 17.6); box('oak', 8.15, 17.5, 0, 8.55, 20.5, 1.9, { col: true }); plant(4.0, 20.9, 0.9);
   // Kantine 0.05
-  table(11.6, 11.6, 15.6, 12.4); chairsAround(11.6, 11.6, 15.6, 12.4); bowl(13.6, 12.0, 0.75);
+  bowl(13.6, 12.0, 0.75);
   table(11.2, 8.8, 12.0, 10.4); chairsAround(11.2, 8.8, 12.0, 10.4); table(13.6, 8.8, 14.4, 10.4); chairsAround(13.6, 8.8, 14.4, 10.4);
   counter(10.27, 10.0, 10.9, 13.2); box('white', 10.27, 9.3, 0, 10.9, 9.95, 2.0, { col: true }); box('black', 10.9, 9.35, 1.0, 10.91, 9.9, 1.05);
   // Techn. dienst 0.09
@@ -936,10 +1004,10 @@ function buildBuilding() {
   hygArm(17.35, 12.75, 0.88, 1.15);
   box('black', 17.0, 8.3, 0.008, 18.8, 10.2, 0.02); sofa(16.15, 9.2, 16.7, 11.0, 'e');
   // Ontvangstruimte 0.03 — lange tafel, bank
-  table(22.1, 9.6, 23.1, 14.0); chairsAround(22.1, 9.6, 23.1, 14.0, 'fabric'); bowl(22.6, 10.6, 0.75); bowl(22.6, 11.8, 0.75, 20, 0.2); bowl(22.6, 13.0, 0.75);
-  box('accentWall', 19.85, 12.4, 0, 19.95, 15.8, 3.0); plant(24.4, 8.6, 1.3); plant(20.3, 8.6, 1.0);
+  bowl(22.6, 10.6, 0.75); bowl(22.6, 11.8, 0.75, 20, 0.2); bowl(22.6, 13.0, 0.75);
+  plant(24.4, 8.6, 1.3); plant(20.3, 8.6, 1.0);
   // Hal 0.02 — keukeneiland, garderobe, zitbank
-  counter(21.2, 17.3, 23.8, 18.0, 0.95); bowl(22.0, 17.65, 0.95, 14); crateRow(22.6, 23.6, 17.5, 0.95, 6); for (let x = 21.5; x < 23.7; x += 0.6) { box('black', x - 0.02, 16.9, 0, x + 0.02, 16.94, 0.7); box('fabric', x - 0.18, 16.75, 0.68, x + 0.18, 17.1, 0.74); }
+  bowl(22.0, 17.65, 0.95, 14); crateRow(22.6, 23.6, 17.5, 0.95, 6); for (let x = 21.5; x < 23.7; x += 0.6) { box('black', x - 0.02, 16.9, 0, x + 0.02, 16.94, 0.7); box('fabric', x - 0.18, 16.75, 0.68, x + 0.18, 17.1, 0.74); }
   counter(23.85, 19.3, 24.45, 21.3, 0.92); lockers(5.0, 23.4, 10.8, 23.85, 1.9); box('oak', 11.2, 22.9, 0, 12.8, 23.5, 0.45, { col: true });
   sofa(0.3, 12.0, 1.1, 14.4, 'w'); plant(0.6, 20.5, 1.2); plant(16.5, 23.4, 1.1); plant(24.6, 23.5, 1.0);
   // Sanitair, kleedruimtes
@@ -948,16 +1016,12 @@ function buildBuilding() {
   for (const x of [12.5, 14.0, 15.35]) box('sanitary', x - 0.2, 15.6, 0, x + 0.2, 16.05, 0.42);
   for (const x of [20.8, 22.1, 23.2]) box('sanitary', x - 0.2, 19.3, 0, x + 0.2, 19.75, 0.42);
   // Spreekkamer 0.11
-  table(27.1, 20.0, 28.3, 22.6); chairsAround(27.1, 20.0, 28.3, 22.6, 'fabric2');
   canvasPlane(2.0, 1.15, drawScreen('Welkom', 'SPREEKKAMER 0.11'), W(30.13, 21.3, 1.55), -Math.PI / 2, { emissive: 0.9 });
   // Demoruimte 0.13 — tomatenrassen in kistjes
   for (const [i, y] of [[0, 17.6], [1, 20.2]]) { table(31.2, y, 38.8, y + 1.4, 0.85, 'white'); for (let k = 0; k < 3; k++) crateRow(31.35, 38.65, y + 0.1 + k * 0.42, 0.85, i * 4 + k * 2); }
   for (const x of [31.6, 33.2, 34.8, 36.4, 38.0]) { plant(x, 23.95 - 0.35, 1.0); }
   plant(39.4, 16.6, 1.2);
   // Presentatieruimte 1.02 — scherm op wand I, stoelen gericht naar het westen
-  canvasPlane(3.6, 2.0, drawScreen('Tomatenrassen', 'RASSENPRESENTATIE · 1.02'), W(24.93, 19.2, FL1 + 1.95), Math.PI / 2, { emissive: 1.0 });
-  box('black', 25.3, 18.8, FL1, 25.9, 19.6, FL1 + 1.1, { col: true });
-  for (let x = 28.0; x <= 35.0; x += 1.4) for (let y = 17.0; y <= 21.6; y += 0.62) { if (Math.abs(y - 19.3) < 0.4) continue; chair(x, y, 'w', 'fabric', FL1); }
   table(36.6, 17.2, 38.8, 18.4, FL1 + 0.95, 'oak'); box('oak', 36.6, 17.2, FL1, 38.8, 18.4, FL1 + 0.95, { col: true }); crateRow(36.7, 38.7, 17.3, FL1 + 0.95, 0); crateRow(36.7, 38.7, 17.95, FL1 + 0.95, 4);
   plant(39.4, 16.6, 1.2, FL1); plant(25.4, 16.6, 1.1, FL1);
   // Ruimte 1.01
@@ -967,12 +1031,7 @@ function buildBuilding() {
   // Opslagruimte 0.20 (verdieping)
   rack(4.0, 9.0, 15.0, 10.0, 2.6, 2, FL1); rack(4.0, 12.5, 15.0, 13.5, 2.6, 2, FL1); rack(4.0, 16.0, 15.0, 17.0, 2.6, 2, FL1); rack(4.0, 19.5, 9.5, 20.5, 2.6, 2, FL1);
 
-  // --- entree: puntig luifeldak met riet op eiken staanders
-  for (const [x, y] of [[15.7, 3.6], [20.1, 3.6]]) box('oak', x - 0.1, y - 0.1, 0, x + 0.1, y + 0.1, 3.05, { col: true });
-  box('oak', 15.6, 3.5, 2.86, 20.2, 8, 3.05); box('oak', 15.6, 3.5, 2.86, 15.8, 8, 3.05); box('oak', 20.0, 3.5, 2.86, 20.2, 8, 3.05);
-  { const cone = new THREE.ConeGeometry(1, 1, 4, 1, false); cone.rotateY(Math.PI / 4); cone.scale(6.2 / Math.SQRT2, 3.6, 5.6 / Math.SQRT2); cone.translate(17.9, 3.0 + 1.8, -5.6); addGeo('thatch', cone);
-    const cap = new THREE.ConeGeometry(1, 1, 4, 1, false); cap.rotateY(Math.PI / 4); cap.scale(0.5 / Math.SQRT2, 0.5, 0.5 / Math.SQRT2); cap.translate(17.9, 6.45, -5.6); addGeo('trim', cap); }
-  box('oak', 15.0, 2.9, 2.84, 20.8, 8.0, 2.86); box('led', 17.6, 5.3, 2.83, 18.2, 5.9, 2.84);
+  // entreeluifel: zie aanpasbaar element 'luifel'
 }
 
 // neonlogo op de kopgevel van volume A (aan de weg); licht 's avonds op
@@ -1065,7 +1124,7 @@ function sphereGeo(r, cx, cy, cz, sx = 1, sy = 1, sz = 1, detail = 0) {
 }
 const cropChunks = [];
 function buildCrops() {
-  const dens = lowGPU ? 0.8 : 0.6;
+  const dens = lowGPU ? 0.8 : 0.7;
   // één plant = steel + drie bladpakketten (onderste blad is weggeplukt, zoals bij tomaat gebruikelijk)
   const stem = new THREE.CylinderGeometry(0.012, 0.014, 2.9, 4, 1, true).toNonIndexed(); stem.translate(0, 0.6 + 1.45, 0); stem.deleteAttribute('uv');
   const plantGeo = mergeGeometries([stem, sphereGeo(0.34, 0.05, 1.55, 0.05, 0.72, 0.85, 1.6), sphereGeo(0.34, -0.05, 1.98, -0.06, 0.72, 0.9, 1.55), sphereGeo(0.33, 0.04, 2.4, 0.04, 0.7, 0.9, 1.6), sphereGeo(0.3, -0.06, 2.8, -0.05, 0.8, 0.85, 1.55), sphereGeo(0.25, 0.03, 3.18, 0.02, 0.75, 0.9, 1.4)].map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
@@ -1157,7 +1216,7 @@ function ribbon(key, curve, width, z, segs) {
 function dashes(curve, len, gap, z) { const L = curve.getLength(); for (let d = 0; d < L - len; d += len + gap) { const a = curve.getPointAt(d / L), b = curve.getPointAt((d + len) / L); beam('paint', W(a.x, a.z, z), W(b.x, b.z, z), 0.12, 0.006); } }
 function edgeLines(curve, off, z) { for (const sgn of [-1, 1]) { const pts = curve.getSpacedPoints(400); for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], t = new THREE.Vector2(b.x - a.x, b.z - a.z).normalize(); const nx = t.y * off * sgn, ny = -t.x * off * sgn; beam('paint', W(a.x + nx, a.z + ny, z), W(b.x + nx, b.z + ny, z), 0.1, 0.006); } } }
 function buildSite() {
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.3; ground.receiveShadow = true;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.3; ground.receiveShadow = true; SITE.ground = ground;
   const uv = ground.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2400, uv.getY(i) * 2400); scene.add(ground);
   const flat = (k, x0, y0, x1, y1, z = 0) => box(k, x0, y0, z - 0.02, x1, y1, z);
   const paintX = (x0, x1, y, dash = 0) => { if (!dash) flat('paint', x0, y - 0.07, x1, y + 0.07, 0.012); else for (let x = x0; x < x1; x += dash * 2) flat('paint', x, y - 0.07, Math.min(x1, x + dash), y + 0.07, 0.012); };
@@ -1318,7 +1377,7 @@ function updateTraffic(dt) {
   if (!trafficMesh) return;
   traffic.forEach((v, i) => {
     const L = v.truck ? (v.side ? 9 : 13) : 4.5, H = v.truck ? 3.4 : 1.5, Wd = v.truck ? 2.5 : 1.85;
-    if (v.local && SITE.road) { const L2 = SITE.road.getLength(); v.u = (v.u + v.dir * v.sp * dt / L2 + 1) % 1; const p = SITE.road.getPointAt(v.u), tg = SITE.road.getTangentAt(v.u); const sideOff = v.dir > 0 ? -1.6 : 1.6; const nx = tg.z * sideOff, ny = -tg.x * sideOff; _tq.setFromAxisAngle(_up, Math.atan2(tg.x, tg.z)); _tm.compose(_tp.set(p.x + nx, H / 2 + 0.3, -(p.z + ny)), _tq, _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
+    if (v.local && SITE.road) { const L2 = SITE.road.getLength(); v.u = (v.u + v.dir * v.sp * dt / L2 + 1) % 1; const p = SITE.road.getPointAt(v.u), tg = SITE.road.getTangentAt(v.u); const sideOff = v.dir > 0 ? 1.6 : -1.6; const nx = tg.z * sideOff, ny = -tg.x * sideOff; _tq.setFromAxisAngle(_up, Math.atan2(tg.x, -tg.z)); _tm.compose(_tp.set(p.x + nx, H / 2 + 0.3, -(p.z + ny)), _tq, _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
     if (v.side) { v.y += v.dir * v.sp * dt; if (v.y > 420) v.y = -20; if (v.y < -20) v.y = 420; _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
     v.x += v.dir * v.sp * dt; if (v.x > 520) v.x = -520; if (v.x < -520) v.x = 520;
     if (v.y > -30 && v.x > 90) v.x = v.dir > 0 ? -400 : 88;
@@ -1398,7 +1457,7 @@ const envGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.Me
 const pmrem = new THREE.PMREMGenerator(renderer);
 let envRT = null;
 const sun = new THREE.DirectionalLight(0xffffff, 3); sun.castShadow = true;
-sun.shadow.mapSize.set(lowGPU ? 2048 : 4096, lowGPU ? 2048 : 4096); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
+sun.shadow.mapSize.set(lowGPU ? 2048 : 4096, lowGPU ? 2048 : 4096); sun.shadow.radius = 2.5; sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
 sun.shadow.autoUpdate = false; let shadowDirty = true;
 scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xdfe8ff, 0x5a5440, 0.5); scene.add(hemi);
@@ -1406,9 +1465,9 @@ scene.fog = new THREE.FogExp2(0xc9c0ae, 0.003);
 const sunDir = new THREE.Vector3();
 
 const PRESETS = {
-  morning: { elev: 9, azim: 62, turb: 6, ray: 1.8, mie: 0.012, mieG: 0.88, sun: 0xffd6a8, sunI: 4.2, hemi: 0.28, fog: 0xd2c8b4, fogD: 0.0011, exp: 0.62, env: 0.8, lamps: 0, gh: 0.0, street: 0, interior: 1.4, steam: 1.0 },
-  noon: { elev: 42, azim: -15, turb: 3, ray: 1.0, mie: 0.005, mieG: 0.8, sun: 0xfff4e6, sunI: 4.0, hemi: 0.35, fog: 0xbfcdd8, fogD: 0.0007, exp: 0.52, env: 0.9, lamps: 0, gh: 0.0, street: 0, interior: 1.2, steam: 1.0 },
-  dusk: { elev: -1.2, azim: -112, turb: 6, ray: 3.0, mie: 0.01, mieG: 0.85, sun: 0xff9a60, sunI: 0.25, hemi: 0.12, fog: 0x2a3247, fogD: 0.0016, exp: 0.95, env: 0.55, lamps: 5, gh: 0.9, street: 6, interior: 2.6, steam: 0.35 },
+  morning: { elev: 9, azim: 62, turb: 6, ray: 1.8, mie: 0.012, mieG: 0.88, sun: 0xffd6a8, sunI: 4.2, hemi: 0.28, fog: 0xd2c8b4, fogD: 0.0011, exp: 0.95, env: 0.8, lamps: 0, gh: 0.0, street: 0, interior: 1.4, steam: 1.0 },
+  noon: { elev: 42, azim: -15, turb: 3, ray: 1.0, mie: 0.005, mieG: 0.8, sun: 0xfff4e6, sunI: 4.0, hemi: 0.35, fog: 0xbfcdd8, fogD: 0.0007, exp: 0.8, env: 0.9, lamps: 0, gh: 0.0, street: 0, interior: 1.2, steam: 1.0 },
+  dusk: { elev: -1.2, azim: -112, turb: 6, ray: 3.0, mie: 0.01, mieG: 0.85, sun: 0xff9a60, sunI: 0.25, hemi: 0.12, fog: 0x2a3247, fogD: 0.0016, exp: 1.35, env: 0.55, lamps: 5, gh: 0.9, street: 6, interior: 2.6, steam: 0.35 },
 };
 let preset = 'morning';
 function applyPreset(name) {
@@ -1427,7 +1486,7 @@ function applyPreset(name) {
   document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === name));
 }
 
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * PR, innerHeight * PR, { type: THREE.HalfFloatType, samples: lowGPU ? 0 : 4 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * PR0, innerHeight * PR0, { type: THREE.HalfFloatType, samples: lowGPU ? 0 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
 // contactschaduwen (ambient occlusion): geeft hoeken, auto's en gewassen diepte
 let gtao = null;
@@ -1437,11 +1496,15 @@ if (!lowGPU) {
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, radiusExponent: 1, rings: 2, samples: 12 });
   gtao.blendIntensity = 1.0;
   gtao.overrideVisibility = function () { const cache = this._visibilityCache; this.scene.traverse(o => { cache.set(o, o.visible); const m = o.material; if (o.isPoints || o.isLine || o === sky || (m && (m.transparent || m.alphaTest > 0))) o.visible = false; }); };
+  const ss = gtao.setSize.bind(gtao); gtao.setSize = (w, h) => ss(Math.max(1, w >> 1), Math.max(1, h >> 1)); gtao.setSize(innerWidth * PR, innerHeight * PR);
+  gtao.enabled = false; // standaard uit (snel); aan via Kwaliteit: Mooi
   composer.addPass(gtao);
 }
+let quality = 'snel';
+function setQuality(q) { quality = q; prMax = q === 'mooi' ? PR : PR0; if (gtao) gtao.enabled = q === 'mooi' && cut === 'all'; if (q === 'snel' && prCur > prMax) { prCur = prMax; renderer.setPixelRatio(prCur); composer.setPixelRatio(prCur); finish.uniforms.uRes.value.set(innerWidth * prCur, innerHeight * prCur); } document.querySelectorAll('[data-q]').forEach(b => b.setAttribute('aria-pressed', b.dataset.q === q)); try { localStorage.setItem('axia-q', q); } catch (e) { } }
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.55, 0.92); composer.addPass(bloom);
 const finish = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uVig: { value: 0.22 }, uRes: { value: new THREE.Vector2(innerWidth * PR, innerHeight * PR) }, uSharp: { value: 0.32 } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uVig: { value: 0.22 }, uRes: { value: new THREE.Vector2(innerWidth * PR0, innerHeight * PR0) }, uSharp: { value: 0.32 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
   fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uVig, uSharp; uniform vec2 uRes; varying vec2 vUv;
     void main(){ vec2 px = 1.0 / uRes; vec4 c = texture2D(tDiffuse, vUv);
@@ -1558,12 +1621,13 @@ function groundAt(x, y, feet) {
 }
 let colGrid = null; const CG = 4;
 function buildColGrid() { colGrid = new Map(); for (const c of colliders) { for (let i = Math.floor(c.x0 / CG); i <= Math.floor(c.x1 / CG); i++) for (let j = Math.floor(c.y0 / CG); j <= Math.floor(c.y1 / CG); j++) { const k = i * 100003 + j; let a = colGrid.get(k); if (!a) colGrid.set(k, a = []); a.push(c); } } }
-function blocked(x, y, feet, r = 0.28) {
+function blocked(x, y, feet, r = 0.24, thruDoors = false) {
   const za = feet + 0.4, zb = feet + 1.8;
   if (!colGrid) buildColGrid();
   const cell = colGrid.get(Math.floor(x / CG) * 100003 + Math.floor(y / CG)) || [];
   const near = (Math.floor((x - r) / CG) !== Math.floor((x + r) / CG) || Math.floor((y - r) / CG) !== Math.floor((y + r) / CG)) ? [...new Set([...(colGrid.get(Math.floor((x - r) / CG) * 100003 + Math.floor((y - r) / CG)) || []), ...(colGrid.get(Math.floor((x + r) / CG) * 100003 + Math.floor((y - r) / CG)) || []), ...(colGrid.get(Math.floor((x - r) / CG) * 100003 + Math.floor((y + r) / CG)) || []), ...(colGrid.get(Math.floor((x + r) / CG) * 100003 + Math.floor((y + r) / CG)) || [])])] : cell;
   for (const c of near) {
+    if (thruDoors && c.door) continue;
     if (!c.active || c.z1 < za || c.z0 > zb) continue;
     if (x + r < c.x0 || x - r > c.x1 || y + r < c.y0 || y - r > c.y1) continue;
     const cx = Math.max(c.x0, Math.min(x, c.x1)), cy = Math.max(c.y0, Math.min(y, c.y1));
@@ -1573,37 +1637,74 @@ function blocked(x, y, feet, r = 0.28) {
 }
 const joy = { x: 0, y: 0, id: null };
 let walkTarget = null;
+const pickSets = {}, PICK_FLOOR = new Set(['concrete', 'wood', 'tile', 'stone', 'asphalt', 'paving', 'grass', 'foil', 'plaster', 'panel', 'steel', 'oak', 'trim', 'frame', 'inox', 'blue', 'sect', 'evpaint']);
 const ringGeo = new THREE.RingGeometry(0.2, 0.3, 40); ringGeo.rotateX(-Math.PI / 2);
 const hoverRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false })); hoverRing.visible = false; hoverRing.renderOrder = 6; scene.add(hoverRing);
 const targetRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xf2a541, transparent: true, opacity: 0.95, depthWrite: false })); targetRing.visible = false; targetRing.renderOrder = 6; scene.add(targetRing);
 const floorRc = new THREE.Raycaster(), floorNdc = new THREE.Vector2();
 function floorPick(cx, cy) {
   const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 80;
-  const objs = buildingMeshes.filter(m => m.visible && m.material && !m.material.transparent);
-  const hit = floorRc.intersectObjects(objs, false)[0]; if (!hit) return null;
+  if (!pickSets.floor) pickSets.floor = [...buildingMeshes.filter(m => PICK_FLOOR.has(m.name)), SITE.ground].filter(Boolean);
+  const objs = [...pickSets.floor, ...ELS.filter(e => e.group).map(e => e.group)];
+  const hit = floorRc.intersectObjects(objs, true).find(h => !(h.object.material && h.object.material.transparent)); if (!hit) return null;
   const n = hit.face ? hit.face.normal : null;
   if (n && n.y > 0.6) return { x: hit.point.x, y: -hit.point.z, h: hit.point.y };
   const back = hit.point.clone().addScaledVector(floorRc.ray.direction, -0.55); // muur aangeklikt: stop ervoor
   return { x: back.x, y: -back.z, h: player.feet };
 }
-function setWalkTarget(p) { walkTarget = { x: p.x, y: p.y, h: p.h, best: Infinity, t: 0 }; }
+// route zoeken (A* op een raster van 0,4 m) zodat je via deuren loopt in plaats van tegen muren
+function lineFree(ax, ay, bx, by, feet) { const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 0.2); for (let i = 1; i <= n; i++) { const x = ax + (bx - ax) * i / n, y = ay + (by - ay) * i / n; if (blocked(x, y, feet, 0.26, true) || Math.abs(groundAt(x, y, feet + 0.3) - feet) > 0.5) return false; } return true; }
+function findPath(sx, sy, tx, ty, feet) {
+  const G = 0.4, pad = 14, ox = Math.min(sx, tx) - pad, oy = Math.min(sy, ty) - pad, NW = Math.ceil((Math.abs(tx - sx) + 2 * pad) / G), NH = Math.ceil((Math.abs(ty - sy) + 2 * pad) / G);
+  if (NW * NH > 160000) return null;
+  const st = new Int8Array(NW * NH).fill(-1);
+  const free = (i, j) => { if (i < 0 || j < 0 || i >= NW || j >= NH) return false; const k = j * NW + i; if (st[k] < 0) { const x = ox + i * G, y = oy + j * G; st[k] = (!blocked(x, y, feet, 0.27, true) && Math.abs(groundAt(x, y, feet + 0.3) - feet) < 0.5) ? 1 : 0; } return st[k] === 1; };
+  const si = Math.round((sx - ox) / G), sj = Math.round((sy - oy) / G); let gi = Math.round((tx - ox) / G), gj = Math.round((ty - oy) / G);
+  if (!free(gi, gj)) { let found = false; for (let r = 1; r < 6 && !found; r++) for (let di = -r; di <= r && !found; di++) for (let dj = -r; dj <= r && !found; dj++) if (free(gi + di, gj + dj)) { gi += di; gj += dj; found = true; } if (!found) return null; }
+  const g = new Float32Array(NW * NH).fill(Infinity), from = new Int32Array(NW * NH).fill(-1), heap = [];
+  const h = (i, j) => Math.hypot(i - gi, j - gj);
+  const push = (k, f) => { heap.push([f, k]); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+  const s0 = sj * NW + si, goal = gj * NW + gi; g[s0] = 0; push(s0, h(si, sj)); let it = 0;
+  while (heap.length && it++ < 60000) {
+    const [, k] = pop(); if (k === goal) break; const i = k % NW, j = (k / NW) | 0;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { if (!di && !dj) continue; const ni = i + di, nj = j + dj; if (!free(ni, nj)) continue; if (di && dj && (!free(i + di, j) || !free(i, j + dj))) continue;
+      const nk = nj * NW + ni, ng = g[k] + (di && dj ? 1.4142 : 1); if (ng < g[nk]) { g[nk] = ng; from[nk] = k; push(nk, ng + h(ni, nj)); } }
+  }
+  if (from[goal] < 0 && goal !== s0) return null;
+  const raw = []; for (let k = goal; k >= 0 && k !== s0; k = from[k]) raw.push({ x: ox + (k % NW) * G, y: oy + ((k / NW) | 0) * G }); raw.reverse();
+  // gladstrijken: sla tussenpunten over zolang er vrij zicht is
+  const out = []; let cx = sx, cy = sy, a = 0;
+  while (a < raw.length) { let b = raw.length - 1; while (b > a && !lineFree(cx, cy, raw[b].x, raw[b].y, feet)) b--; out.push(raw[b]); cx = raw[b].x; cy = raw[b].y; a = b + 1; }
+  return out;
+}
+function setWalkTarget(p) {
+  const path = findPath(player.x, player.y, p.x, p.y, player.feet);
+  const pts = path && path.length ? path : [{ x: p.x, y: p.y }];
+  if (path && path.length) { pts[pts.length - 1] = { x: p.x, y: p.y }; if (!lineFree(pts.length > 1 ? pts[pts.length - 2].x : player.x, pts.length > 1 ? pts[pts.length - 2].y : player.y, p.x, p.y, player.feet)) pts[pts.length - 1] = path[path.length - 1]; }
+  const last = pts[pts.length - 1];
+  walkTarget = { pts, k: 0, x: last.x, y: last.y, h: p.h, best: Infinity, t: 0 };
+}
 function updateWalk(dt) {
   let fx = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + (-joy.y);
   let sx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x;
   if (!pointerLocked) player.yaw += ((keys.KeyE ? 1 : 0) - (keys.KeyQ ? 1 : 0)) * dt * 1.6;
   let len = Math.hypot(fx, sx); if (len > 1) { fx /= len; sx /= len; }
-  const speed = (keys.ShiftLeft || keys.ShiftRight ? 4.6 : 2.1);
+  const speed = (keys.ShiftLeft || keys.ShiftRight ? 4.8 : 2.4);
   const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
   let tvx = (fx * sy + sx * cy) * speed, tvy = (fx * cy - sx * sy) * speed;
   // klik-om-te-lopen: vanzelf naar het aangeklikte punt, met de blik mee
   if (len > 0.05) walkTarget = null;
   else if (walkTarget) {
-    const ddx = walkTarget.x - player.x, ddy = walkTarget.y - player.y, d = Math.hypot(ddx, ddy);
-    if (d < 0.35) walkTarget = null;
+    const wp = walkTarget.pts[walkTarget.k], lastWp = walkTarget.k === walkTarget.pts.length - 1;
+    const ddx = wp.x - player.x, ddy = wp.y - player.y, d0 = Math.hypot(ddx, ddy);
+    if (!lastWp && d0 < 0.7) { walkTarget.k++; walkTarget.best = Infinity; walkTarget.t = 0; }
+    const d = lastWp ? d0 : d0 + 2;
+    if (lastWp && d0 < 0.35) walkTarget = null;
     else {
-      const sp = Math.min(d > 14 ? 4.4 : 2.7, d * 2.0 + 0.5); tvx = ddx / d * sp; tvy = ddy / d * sp; len = 1;
+      const sp = Math.min(d > 14 ? 4.4 : 2.8, d * 2.0 + 0.5); tvx = ddx / d0 * sp; tvy = ddy / d0 * sp; len = 1;
       if (!drag) { const dyaw = Math.atan2(Math.sin(Math.atan2(ddx, ddy) - player.yaw), Math.cos(Math.atan2(ddx, ddy) - player.yaw)); player.yaw += dyaw * Math.min(1, dt * 2.4); player.pitch += (-0.06 - player.pitch) * Math.min(1, dt * 1.5); }
-      walkTarget.t += dt; if (d < walkTarget.best - 0.05) { walkTarget.best = d; walkTarget.t = 0; } else if (walkTarget.t > 0.8) walkTarget = null;
+      walkTarget.t += dt; if (d0 < walkTarget.best - 0.05) { walkTarget.best = d0; walkTarget.t = 0; } else if (walkTarget.t > 1.0) walkTarget = null;
     }
   }
   targetRing.visible = !!walkTarget; if (walkTarget) targetRing.position.set(walkTarget.x, walkTarget.h + 0.03, -walkTarget.y);
@@ -1620,11 +1721,13 @@ function updateWalk(dt) {
   const g = groundAt(player.x, player.y, player.feet);
   if (player.feet > g) { player.vy -= 9.8 * dt; player.feet = Math.max(g, player.feet + player.vy * dt); } else player.vy = 0;
   player.x = THREE.MathUtils.clamp(player.x, -200, 300); player.y = THREE.MathUtils.clamp(player.y, -200, 300);
-  const moving = Math.hypot(player.mvx, player.mvy) > 0.3; player.bob += moving ? dt * speed * 3.2 : 0;
-  const targetY = player.feet + 1.68 + (moving ? Math.sin(player.bob) * 0.025 : 0);
+  const moving = Math.hypot(player.mvx, player.mvy) > 0.3; player.bob += moving ? dt * speed * 2.6 : 0;
+  const targetY = player.feet + 1.68 + (moving ? Math.sin(player.bob) * 0.012 : 0);
   player.eyeY += (targetY - player.eyeY) * Math.min(1, dt * 12);
   camera.position.set(player.x, player.eyeY, -player.y);
-  camera.rotation.set(player.pitch, -player.yaw, 0, 'YXZ');
+  // gedempt kijken: camera volgt de kijkrichting vloeiend
+  const kl = Math.min(1, dt * 14); player.cyaw = (player.cyaw ?? player.yaw) + Math.atan2(Math.sin(player.yaw - (player.cyaw ?? player.yaw)), Math.cos(player.yaw - (player.cyaw ?? player.yaw))) * kl; player.cpitch = (player.cpitch ?? player.pitch) + (player.pitch - (player.cpitch ?? player.pitch)) * kl;
+  camera.rotation.set(player.cpitch, -player.cyaw, 0, 'YXZ');
 }
 
 /* ---------- tour (camera paths) ---------- */
@@ -1677,7 +1780,7 @@ orbit.target.copy(W(25, 30, 2));
 let cut = 'all';
 function setCut(c, fly = true) {
   if (fly && mode === 'orbit' && c !== 'all') { camera.position.copy(W(20, -16, 42)); orbit.target.copy(W(20, 12, 0)); }
-  cut = c; if (gtao) gtao.enabled = c === 'all'; CLIP[0].constant = c === 'bg' ? 2.92 : c === 'vd' ? 6.3 : 1e4;
+  cut = c; if (gtao) gtao.enabled = c === 'all' && quality === 'mooi'; CLIP[0].constant = c === 'bg' ? 2.92 : c === 'vd' ? 6.3 : 1e4;
   document.querySelectorAll('[data-cut]').forEach(b => b.setAttribute('aria-pressed', b.dataset.cut === c));
   renderLabels();
 }
@@ -1722,7 +1825,7 @@ function setMode(m) {
   }
   renderLabels();
 }
-function teleport(g) { walkTarget = null; player.x = g[1]; player.y = g[2]; player.feet = g[3]; player.eyeY = g[3] + 1.68; player.vy = 0; player.yaw = THREE.MathUtils.degToRad(g[4]); player.pitch = -0.04; }
+function teleport(g) { walkTarget = null; player.x = g[1]; player.y = g[2]; player.feet = g[3]; player.eyeY = g[3] + 1.68; player.vy = 0; player.yaw = THREE.MathUtils.degToRad(g[4]); player.pitch = -0.04; player.cyaw = player.yaw; player.cpitch = player.pitch; }
 
 /* ---------- input ---------- */
 addEventListener('keydown', e => { keys[e.code] = true; if (mode === 'walk' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
@@ -1734,12 +1837,12 @@ $('#hint').addEventListener('click', () => { $('#hint').hidden = true; });
 let downXY = null, hoverT = 0;
 cv.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
 cv.addEventListener('click', e => {
-  if (mode !== 'walk' || FB.picking) return; $('#hint').hidden = true;
+  if (mode !== 'walk' || FB.picking || CFG.on) return; $('#hint').hidden = true;
   if (downXY && Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return; // was slepen
   const p = floorPick(e.clientX, e.clientY); if (p) setWalkTarget(p);
 });
 cv.addEventListener('pointermove', e => {
-  if (mode !== 'walk' || e.pointerType === 'touch' || e.buttons) { hoverRing.visible = false; return; }
+  if (mode !== 'walk' || CFG.on || e.pointerType === 'touch' || e.buttons) { hoverRing.visible = false; return; }
   const now = performance.now(); if (now - hoverT < 50) return; hoverT = now;
   const p = floorPick(e.clientX, e.clientY); hoverRing.visible = !!p; if (p) hoverRing.position.set(p.x, p.h + 0.03, -p.y);
 });
@@ -1840,7 +1943,24 @@ $('#fbGeneral').addEventListener('click', () => openForm(null));
 $('#fbPickCancel').addEventListener('click', stopPick);
 $('#fbCancel').addEventListener('click', closeForm);
 function openPanel(open) { fbEls.panel.hidden = !open; $('#fbBtn').setAttribute('aria-expanded', open); $('#mapwrap').classList.toggle('fbhide', open); if (open && document.pointerLockElement) document.exitPointerLock?.(); renderList(); }
-$('#fbBtn').addEventListener('click', () => openPanel(fbEls.panel.hidden));
+$('#fbBtn').addEventListener('click', () => { if (CFG.on) setEdit(false); openPanel(fbEls.panel.hidden); });
+$('#cfgBtn').addEventListener('click', () => setEdit(!CFG.on));
+$('#cfgClose').addEventListener('click', () => setEdit(false));
+$('#cfgPick').addEventListener('change', e => { const el = elById[e.target.value]; selectEl(el || null); });
+$('#cfgView').addEventListener('click', () => { const el = CFG.sel; if (!el || !el.view) return; setMode('walk'); $('#hint').hidden = true; teleport(el.view); selectEl(el); });
+$('#cfgReset').addEventListener('click', () => { const el = CFG.sel; if (!el) return; for (const [k, p] of Object.entries(el.props)) el.values[k] = p.def; buildEl(el, true); renderCfg(); saveCfg(); });
+document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => setQuality(b.dataset.q)));
+// selecteren en hover in aanpasmodus
+let cfgHoverT = 0;
+cv.addEventListener('pointermove', e => {
+  if (!CFG.on || e.buttons) return; const now = performance.now(); if (now - cfgHoverT < 60) return; cfgHoverT = now;
+  const el = pickEl(e.clientX, e.clientY); if (el && el !== CFG.sel) { hlHover.box.copy(elBounds(el)).expandByScalar(0.05); hlHover.visible = true; } else hlHover.visible = false;
+});
+cv.addEventListener('click', e => {
+  if (!CFG.on) return; if (downXY && Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return;
+  const el = pickEl(e.clientX, e.clientY); if (el) { selectEl(el); hlHover.visible = false; }
+}, true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && CFG.on) { if (CFG.sel) selectEl(null); else setEdit(false); } });
 $('#fbClose').addEventListener('click', () => openPanel(false));
 document.querySelectorAll('[data-ff]').forEach(b => b.addEventListener('click', () => { FB.filter = b.dataset.ff; document.querySelectorAll('[data-ff]').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList(); }));
 fbEls.form.addEventListener('submit', async e => {
@@ -1931,15 +2051,196 @@ function updatePins() {
   }
 }
 
+
+/* ==========================================================================
+   AANPASSEN — klik een element aan en kies uit de catalogus
+   ========================================================================== */
+const ELS = [], elById = {};
+const SW = { oak: '#c49a6c', walnut: '#7a5236', tableWhite: '#f1f0ec', anthracite: '#2d3033', concreteTop: '#b9b6b0', glass: 'linear-gradient(135deg,#cfe3ea,#7d98a3)', marble: 'linear-gradient(135deg,#fff,#d9d9dc)',
+  black: '#1b1d1f', white: '#f4f4f2', chrome: 'linear-gradient(135deg,#f5f7f8,#9ea6ab)', fabric: '#4d6b55', fabric2: '#8a8f93', fabricBlack: '#222426', fabricOker: '#b58a3a', fabricBlue: '#2f4f78',
+  wood: '#c49a6c', concrete: '#c8c6c1', tile: '#e1e1e3', tileDark: '#55585b', pourWhite: '#ecebe7', feltGreen: '#3f5a48', thatch: '#b89a63', zinc: '#4a4f54', sedum: '#7fa35a' };
+const FACADE = { zilver: [0xf0f2f3, 0xe2e6e8, 'Zilvergrijs (huidig)', '#d9dde0'], wit: [0xffffff, 0xf2f4f5, 'Wit', '#ffffff'], antraciet: [0x5a5f64, 0x4a4f54, 'Antraciet', '#4f5459'], groen: [0x6f8f78, 0x5f7f69, 'Donkergroen', '#5f7f69'], zand: [0xe9dfcc, 0xd8ccb6, 'Zand', '#e2d6c0'] };
+const TOPS = [['oak', 'Eiken'], ['walnut', 'Noten'], ['tableWhite', 'Wit composiet'], ['anthracite', 'Antraciet'], ['concreteTop', 'Beton'], ['marble', 'Marmer'], ['glass', 'Glas']];
+const LEGS = [['black', 'Zwart staal'], ['oak', 'Eiken sledepoot'], ['white', 'Wit'], ['chrome', 'Chroom']];
+const CHAIRS = [['fabric', 'Groen'], ['fabric2', 'Grijs'], ['fabricBlack', 'Zwart'], ['fabricOker', 'Oker'], ['fabricBlue', 'Blauw']];
+const FLOORS = [['wood', 'Eiken'], ['concrete', 'Gepolijst beton'], ['tile', 'Tegel licht'], ['tileDark', 'Tegel antraciet'], ['pourWhite', 'Gietvloer wit']];
+function defineEl(d) { d.values = {}; for (const [k, p] of Object.entries(d.props)) d.values[k] = p.def; ELS.push(d); elById[d.id] = d; return d; }
+// tafel met blad, onderstel en stoelen eromheen (ook op de verdieping)
+function tableSet(x0, y0, x1, y1, z, h, top, leg, chairMat) {
+  const tz = z + h;
+  if (top === 'glass') { box('glass', x0, y0, tz - 0.02, x1, y1, tz, { col: true }); box('frame', x0, y0, tz - 0.025, x1, y1, tz - 0.02); } else box(top, x0, y0, tz - 0.04, x1, y1, tz, { col: true });
+  const along = (x1 - x0) >= (y1 - y0);
+  if (leg === 'oak') { for (const e of [0.25, -0.25]) { if (along) { const xx = e > 0 ? x0 + 0.25 : x1 - 0.33; box('oak', xx, y0 + 0.08, z, xx + 0.08, y1 - 0.08, tz - 0.04, { col: true }); } else { const yy = e > 0 ? y0 + 0.25 : y1 - 0.33; box('oak', x0 + 0.08, yy, z, x1 - 0.08, yy + 0.08, tz - 0.04, { col: true }); } } }
+  else { const k = leg; const i = 0.08; for (const [x, y] of [[x0 + i, y0 + i], [x1 - i, y0 + i], [x0 + i, y1 - i], [x1 - i, y1 - i]]) box(k, x - 0.025, y - 0.025, z, x + 0.025, y + 0.025, tz - 0.04, { col: true });
+    if (along) box(k, x0 + 0.1, (y0 + y1) / 2 - 0.02, tz - 0.12, x1 - 0.1, (y0 + y1) / 2 + 0.02, tz - 0.04); else box(k, (x0 + x1) / 2 - 0.02, y0 + 0.1, tz - 0.12, (x0 + x1) / 2 + 0.02, y1 - 0.1, tz - 0.04); }
+  if (chairMat) chairsAround(x0, y0, x1, y1, chairMat, z);
+}
+const tableProps = (sizes, def) => ({
+  blad: { label: 'Tafelblad', opts: TOPS, def: 'oak' },
+  maat: { label: 'Afmeting', opts: Object.entries(sizes).map(([k, v]) => [k, v[0].toLocaleString('nl-NL') + ' × ' + v[1].toLocaleString('nl-NL') + ' m']), def },
+  poot: { label: 'Onderstel', opts: LEGS, def: 'black' },
+  stoel: { label: 'Stoelen', opts: CHAIRS, def: 'fabric' } });
+function defTable(id, name, room, cx, cy, axis, sizes, def, view, stoel = 'fabric') {
+  const d = defineEl({ id, name, room, view, props: tableProps(sizes, def), build: v => { const [L, Wd] = sizes[v.maat]; const hx = axis === 'x' ? L / 2 : Wd / 2, hy = axis === 'x' ? Wd / 2 : L / 2; tableSet(cx - hx, cy - hy, cx + hx, cy + hy, 0, 0.75, v.blad, v.poot, v.stoel); } });
+  d.props.stoel.def = stoel; d.values.stoel = stoel;
+}
+function defineElements() {
+  defTable('tafel-ontvangst', 'Tafel ontvangstruimte', 'Ontvangstruimte 0.03', 22.6, 11.8, 'y', { s: [3.2, 0.9], m: [4.4, 1.0], l: [5.4, 1.1] }, 'm', ['', 21.2, 15.3, 0, 170]);
+  defTable('tafel-spreek', 'Vergadertafel spreekkamer', 'Spreekkamer 0.11', 27.7, 21.3, 'y', { s: [2.0, 1.0], m: [2.6, 1.2], l: [3.4, 1.2] }, 'm', ['', 29.6, 18.8, 0, 320], 'fabric2');
+  defTable('tafel-kantine', 'Lange tafel kantine', 'Kantine 0.05', 13.6, 12.0, 'x', { s: [3.0, 0.8], m: [4.0, 0.8], l: [4.8, 0.9] }, 'm', ['', 15.4, 9.0, 0, 320]);
+  // presentatieruimte: scherm + opstelling
+  const PS = { wandI: { S: [25.1, 19.6], N: [1, 0], L: [0, 1], depth: 14.5, lat: 3.4 }, noord: { S: [32.5, 23.85], N: [0, -1], L: [1, 0], depth: 7.3, lat: 6.8 }, zuid: { S: [32.5, 16.15], N: [0, 1], L: [1, 0], depth: 7.3, lat: 6.8 } };
+  const faceOf = (vx, vy) => vx > 0.5 ? 'e' : vx < -0.5 ? 'w' : vy > 0.5 ? 'n' : 's';
+  defineEl({ id: 'presentatie', name: 'Scherm en opstelling', room: 'Presentatieruimte 1.02', view: ['', 38.5, 22.6, FL1, 245],
+    props: {
+      positie: { label: 'Positie scherm', opts: [['wandI', 'Kopwand (wand I)'], ['noord', 'Zijwand noord'], ['zuid', 'Zijwand zuid']], def: 'wandI' },
+      formaat: { label: 'Formaat', opts: [['75', '75 inch'], ['86', '86 inch'], ['98', '98 inch'], ['beamer', 'Projectiescherm 3,6 m']], def: 'beamer' },
+      opstelling: { label: 'Opstelling', opts: [['theater', 'Theater'], ['vergader', 'Vergadertafel'], ['u', 'U-vorm']], def: 'theater' },
+      stoel: { label: 'Stoelen', opts: CHAIRS, def: 'fabric' },
+      wand: { label: 'Wand achter scherm', opts: [['oak', 'Eiken latten'], ['walnut', 'Noten latten'], ['black', 'Zwarte latten'], ['feltGreen', 'Groen vilt'], ['none', 'Geen']], def: 'oak' } },
+    build: v => {
+      const P = PS[v.positie], at = (d, l) => [P.S[0] + P.N[0] * d + P.L[0] * l, P.S[1] + P.N[1] * d + P.L[1] * l];
+      const [w, h] = { 75: [1.66, 0.94], 86: [1.9, 1.07], 98: [2.17, 1.22], beamer: [3.6, 2.0] }[v.formaat];
+      const zc = FL1 + (v.formaat === 'beamer' ? 2.25 : 1.75), rotY = P.N[0] > 0.5 ? Math.PI / 2 : P.N[1] < -0.5 ? 0 : Math.PI;
+      // wandafwerking
+      if (v.wand !== 'none') { const ext = Math.min(P.lat, w / 2 + 1.4); const k = v.wand === 'feltGreen' ? 'feltGreen' : v.wand;
+        const [ax, ay] = at(-0.0, -ext), [bx, by] = at(0.0, ext);
+        if (P.N[0] !== 0) { if (k === 'feltGreen') box(k, ax, Math.min(ay, by), FL1 + 0.3, ax + 0.04, Math.max(ay, by), FL1 + 3.4); else slatWall('x', ax - 0.15, Math.max(16.3, Math.min(ay, by)), Math.min(21.9, Math.max(ay, by)), FL1, 7.0, 1); }
+        else { const c = ay; if (k === 'feltGreen') box(k, Math.min(ax, bx), c - (P.N[1] < 0 ? 0.04 : 0), FL1 + 0.3, Math.max(ax, bx), c + (P.N[1] > 0 ? 0.04 : 0), FL1 + 3.4); else slatWall('y', c + (P.N[1] < 0 ? 0.0 : 0.0), Math.min(ax, bx), Math.max(ax, bx), FL1, 6.9, P.N[1] < 0 ? -1 : 1); } }
+      // scherm
+      const [sx, sy] = at(0.09, 0);
+      if (v.formaat === 'beamer') { canvasPlane(w, h, drawScreen('Tomatenrassen', 'RASSENPRESENTATIE · 1.02'), W(sx, sy, zc), rotY, { emissive: 0.8 }); const [cx1, cy1] = at(0.04, -w / 2 - 0.1), [cx2, cy2] = at(0.2, w / 2 + 0.1); box('black', cx1, cy1, zc + h / 2 + 0.02, cx2, cy2, zc + h / 2 + 0.16); }
+      else { canvasPlane(w, h, drawScreen('Tomatenrassen', 'RASSENPRESENTATIE · 1.02'), W(sx, sy, zc), rotY, { emissive: 1.0 }); const [bx1, by1] = at(0.02, -w / 2 - 0.025), [bx2, by2] = at(0.08, w / 2 + 0.025); box('black', bx1, by1, zc - h / 2 - 0.025, bx2, by2, zc + h / 2 + 0.025); }
+      { const [lx, ly] = at(1.1, -(w / 2 + 0.9)); box('black', lx - 0.3, ly - 0.3, FL1, lx + 0.3, ly + 0.3, FL1 + 1.1, { col: true }); }
+      const fN = faceOf(-P.N[0], -P.N[1]), avoid = (x, y) => x > 36.3 && x < 39.1 && y > 16.9 && y < 18.7;
+      if (v.opstelling === 'theater') { for (let d = 3.0; d <= P.depth - 0.8; d += (P.N[0] ? 1.4 : 1.15)) for (let l = -P.lat + 0.5; l <= P.lat - 0.5; l += 0.62) { if (Math.abs(l) < 0.45) continue; const [x, y] = at(d, l); if (!avoid(x, y)) chair(x, y, fN, v.stoel, FL1); } }
+      else if (v.opstelling === 'vergader') { const len = P.depth > 9 ? 5.0 : 3.8, d0 = Math.min(P.depth / 2 + 0.6, 6.5); const [ax, ay] = at(d0 - len / 2, -0.7), [bx, by] = at(d0 + len / 2, 0.7); tableSet(Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), FL1, 0.75, 'oak', 'black', v.stoel); }
+      else { const dEnd = Math.min(8.0, P.depth - 0.9), ws = 0.75; const r1 = [at(2.2, -2.6), at(dEnd, -2.6 + ws)], r2 = [at(2.2, 2.6 - ws), at(dEnd, 2.6)], r3 = [at(dEnd - ws, -2.6 + ws), at(dEnd, 2.6 - ws)];
+        for (const [[a1, a2], [b1, b2]] of [r1, r2, r3]) tableSet(Math.min(a1, b1), Math.min(a2, b2), Math.max(a1, b1), Math.max(a2, b2), FL1, 0.75, 'tableWhite', 'black', null);
+        for (let d = 2.6; d <= dEnd - 0.4; d += 0.7) { const [x1, y1] = at(d, -2.95), [x2, y2] = at(d, 2.95); chair(x1, y1, faceOf(P.L[0], P.L[1]), v.stoel, FL1); chair(x2, y2, faceOf(-P.L[0], -P.L[1]), v.stoel, FL1); }
+        for (let l = -1.4; l <= 1.4; l += 0.7) { const [x, y] = at(dEnd + 0.35, l); chair(x, y, fN, v.stoel, FL1); } }
+    } });
+  defineEl({ id: 'keukeneiland', name: 'Keukeneiland', room: 'Hal 0.02', view: ['', 20.6, 15.0, 0, 30],
+    props: { blad: { label: 'Werkblad', opts: [['marble', 'Wit marmer'], ['concreteTop', 'Beton'], ['oak', 'Eiken'], ['anthracite', 'Antraciet'], ['stone', 'Natuursteen grijs']], def: 'stone' }, front: { label: 'Front', opts: [['white', 'Wit'], ['oak', 'Eiken'], ['anthracite', 'Antraciet'], ['walnut', 'Noten']], def: 'white' } },
+    build: v => counter(21.2, 17.3, 23.8, 18.0, 0.95, v.front, v.blad) });
+  defineEl({ id: 'lattenwand', name: 'Lattenwand en ontvangstbalie', room: 'Ontvangstruimte 0.03', view: ['', 23.8, 13.8, 0, 270],
+    props: { latten: { label: 'Wandafwerking', opts: [['oak', 'Eiken latten'], ['walnut', 'Noten latten'], ['black', 'Zwarte latten'], ['white', 'Witte latten'], ['feltGreen', 'Groen vilt']], def: 'oak' }, balie: { label: 'Balie', opts: [['oak', 'Eiken'], ['white', 'Wit'], ['anthracite', 'Antraciet'], ['walnut', 'Noten']], def: 'oak' } },
+    build: v => { if (v.latten === 'feltGreen') box('feltGreen', 19.96, 12.4, 0, 20.0, 15.8, 6.6); else { const k = v.latten; for (let t = 12.4; t < 15.76; t += 0.1) box(k, 19.96, t, 0, 20.005, t + 0.045, 6.6); box('black', 19.95, 12.4, 0, 19.96, 15.8, 6.6); }
+      box(v.balie, 20.3, 13.0, 0, 20.95, 15.4, 1.05, { col: true }); box('white', 20.25, 12.95, 1.05, 21.0, 15.45, 1.1); box('led', 20.95, 13.1, 0.08, 20.96, 15.3, 0.12); } });
+  const defFloor = (id, name, room, x0, y0, x1, y1, z, def, view) => defineEl({ id, name, room, view, props: { vloer: { label: 'Vloer', opts: FLOORS, def } }, build: v => box(v.vloer, x0, y0, z, x1, y1, z + 0.01) });
+  defFloor('vloer-ontvangst', 'Vloer ontvangstruimte', 'Ontvangstruimte 0.03', 19.9, 8, 25, 16, 0, 'wood', ['', 21.2, 15.3, 0, 170]);
+  defFloor('vloer-kantine', 'Vloer kantine', 'Kantine 0.05', 10.2, 8, 16, 13.3, 0, 'wood', ['', 15.4, 9.0, 0, 320]);
+  defFloor('vloer-kantoor', 'Vloer spreekkamer, gang en demoruimte', 'Kantoorvleugel', 25.1, 16, 40, 24, 0, 'wood', ['', 31.0, 17.2, 0, 60]);
+  defFloor('vloer-verdieping', 'Vloer verdieping', 'Verdieping 1.01 / 1.02', 19.6, 16, 40, 24, FL1, 'wood', ['', 38.5, 22.6, FL1, 245]);
+  // gevelvlakken: raam of muur
+  const facadeOpts = [['dicht', 'Dichte gevel'], ['raam', 'Raamstrook'], ['plafond', 'Glas tot plafond'], ['vlies', 'Glas tot boven']];
+  const defFacade = (id, name, room, line, a, b, wins, view, def = 'dicht', opts = facadeOpts) => defineEl({ id, name, room, view, props: { gevel: { label: 'Gevel', opts, def } },
+    build: v => { const ops = wins[v.gevel] || []; if (line[0] === 'y') wall('panel', a, line[1], b, line[1], 0, EAVE, ST, ops, { plan: false }); else wall('panel', line[1], a, line[1], b, 0, EAVE, ST, ops, { plan: false }); } });
+  defFacade('gevel-kantine', 'Gevel kantine', 'Voorgevel beuk 2', ['y', 8], 10.6, 15.8, { raam: [[10.8, 15.6, 0.9, 2.6, 'win']], plafond: [[10.8, 15.6, 0.05, 2.9, 'win']], vlies: [[10.8, 15.6, 0.05, 6.6, 'win']] }, ['', 13.0, 10.0, 0, 180]);
+  defFacade('gevel-ontvangst', 'Gevel ontvangstruimte', 'Voorgevel beuk 2', ['y', 8], 20.0, 24.9, { raam: [[20.2, 24.7, 0.9, 2.6, 'win']], plafond: [[20.2, 24.7, 0.05, 2.9, 'win']], vlies: [[20.2, 24.7, 0.05, 6.6, 'win']] }, ['', 22.5, 14.8, 0, 180]);
+  defFacade('gevel-ontvangst-zij', 'Zijgevel ontvangstruimte', 'Kopgevel beuk 2', ['x', 25], 8.4, 15.6, { raam: [[8.6, 15.4, 0.9, 2.6, 'win']], plafond: [[8.6, 15.4, 0.05, 2.9, 'win']], vlies: [[8.6, 15.4, 0.05, 6.2, 'win']] }, ['', 21.5, 12.0, 0, 90]);
+  defFacade('gevel-beuk3', 'Voorgevel spreekkamer en presentatieruimte', 'Voorgevel beuk 3', ['y', 16], 25.6, 39.4, { bg: [[31.0, 39.2, 0.9, 2.7, 'win']], vd: [[26.3, 29.3, 4.0, 6.3, 'win'], [31.4, 34.4, 4.0, 6.3, 'win'], [36.0, 39.0, 4.0, 6.3, 'win']], beide: [[31.0, 39.2, 0.9, 2.7, 'win'], [26.3, 29.3, 4.0, 6.3, 'win'], [31.4, 34.4, 4.0, 6.3, 'win'], [36.0, 39.0, 4.0, 6.3, 'win']] }, ['', 33, 8, 0, 0], 'dicht', [['dicht', 'Dichte gevel'], ['bg', 'Ramen begane grond'], ['vd', 'Ramen verdieping'], ['beide', 'Beide']]);
+  defFacade('gevel-demo', 'Kopgevel demoruimte', 'Kopgevel beuk 3', ['x', 40], 16.4, 22.7, { raam: [[18.0, 22.6, 0.9, 2.7, 'win']], plafond: [[17.0, 22.6, 0.05, 2.9, 'win']], vlies: [[17.0, 22.6, 0.05, 2.9, 'win'], [17.2, 19.6, 4.0, 6.3, 'win'], [20.3, 22.4, 4.0, 6.3, 'win']] }, ['', 35, 20.5, 0, 90], 'dicht', [['dicht', 'Dichte gevel'], ['raam', 'Raamstrook'], ['plafond', 'Glazen pui'], ['vlies', 'Pui + ramen verdieping']]);
+  defFacade('gevel-west', 'Westgevel', 'Langs de weg tussen de kassen', ['x', 0], 9, 23, { raam: [[10.5, 15.5, 0.9, 2.6, 'win'], [18.0, 22.8, 0.9, 2.6, 'win']], plafond: [[10.5, 15.5, 0.05, 2.9, 'win'], [18.0, 22.8, 0.05, 2.9, 'win']], vlies: [[9.2, 22.8, 0.9, 6.0, 'win']] }, ['', -3.5, 16, 0, 90]);
+  defineEl({ id: 'luifel', name: 'Entreeluifel', room: 'Entree', view: ['', 17.9, -6, 0, 0],
+    props: { dak: { label: 'Dakbedekking', opts: [['thatch', 'Riet (huidig)'], ['zinc', 'Zwart zink'], ['sedum', 'Groen sedum']], def: 'thatch' }, staander: { label: 'Staanders', opts: [['oak', 'Eiken'], ['black', 'Zwart staal']], def: 'oak' } },
+    build: v => { for (const [x, y] of [[15.7, 3.6], [20.1, 3.6]]) box(v.staander, x - 0.1, y - 0.1, 0, x + 0.1, y + 0.1, 3.05, { col: true });
+      box(v.staander, 15.6, 3.5, 2.86, 20.2, 8, 3.05);
+      const cone = new THREE.ConeGeometry(1, 1, 4, 1, false); cone.rotateY(Math.PI / 4); cone.scale(6.2 / Math.SQRT2, 3.6, 5.6 / Math.SQRT2); cone.translate(17.9, 4.8, -5.6); addGeo(v.dak, cone);
+      const cap = new THREE.ConeGeometry(1, 1, 4, 1, false); cap.rotateY(Math.PI / 4); cap.scale(0.5 / Math.SQRT2, 0.5, 0.5 / Math.SQRT2); cap.translate(17.9, 6.45, -5.6); addGeo('trim', cap);
+      box('oak', 15.0, 2.9, 2.84, 20.8, 8.0, 2.86); box('led', 17.6, 5.3, 2.83, 18.2, 5.9, 2.84); } });
+  defineEl({ id: 'gevelkleur', name: 'Gevel- en dakbeplating', room: 'Hele gebouw', global: true, view: ['', 30, -2, 0, 315],
+    props: { kleur: { label: 'Kleur', opts: Object.entries(FACADE).map(([k, v]) => [k, v[2]]), def: 'zilver', sw: Object.fromEntries(Object.entries(FACADE).map(([k, v]) => [k, v[3]])) } },
+    apply: v => { const f = FACADE[v.kleur]; M.panel.color.setHex(f[0]); M.roof.color.setHex(f[1]); M.sect.color.setHex(f[0]); } });
+}
+const _bb = new THREE.Box3();
+function buildEl(el, flash) {
+  if (el.global) { el.apply(el.values); return; }
+  if (el.group) { scene.remove(el.group); el.group.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const c of el.cols) { const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } }
+  const cap = capture(() => el.build(el.values));
+  el.group = groupFromCapture(cap); el.cols = cap.cols; el.group.userData.el = el; scene.add(el.group);
+  colGrid = null; shadowDirty = true;
+  if (flash) flashBox(el);
+}
+function elBounds(el) { if (el.global) return _bb.set(W(-0.3, 24.3, 0).setZ(-24.3), W(40.3, -0.3, 9).setZ(0.3)); return _bb.setFromObject(el.group); }
+// markering van het element (hover = dun, selectie = oranje)
+const hlHover = new THREE.Box3Helper(new THREE.Box3(), 0xffffff), hlSel = new THREE.Box3Helper(new THREE.Box3(), 0xf2a541);
+hlHover.material.transparent = true; hlHover.material.opacity = 0.7; hlHover.material.depthTest = false; hlSel.material.depthTest = false; hlSel.material.transparent = true;
+hlHover.visible = hlSel.visible = false; hlHover.renderOrder = hlSel.renderOrder = 9; scene.add(hlHover, hlSel);
+let flashT = 0;
+function flashBox(el) { hlSel.box.copy(elBounds(el)).expandByScalar(0.05); hlSel.visible = true; flashT = 1; }
+function pickEl(cx, cy) {
+  const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 120;
+  const objs = ELS.filter(e => e.group).map(e => e.group); const facade = buildingMeshes.filter(m => m.name === 'panel' || m.name === 'roof');
+  const occl = pickSets.occl || (pickSets.occl = buildingMeshes.filter(m => ['plaster', 'concrete', 'ceil', 'steel', 'trim', 'frame', 'oak', 'tile', 'wood', 'sect', 'inox', 'blue', 'stone'].includes(m.name)));
+  const hit = floorRc.intersectObjects([...objs, ...facade, ...occl], true).find(h => h.point.y <= CLIP[0].constant + 0.01);
+  if (!hit) return null;
+  let o = hit.object; while (o && !o.userData.el) o = o.parent; if (o) return o.userData.el;
+  if (hit.object.name === 'panel' || hit.object.name === 'roof') return elById.gevelkleur;
+  return null;
+}
+const CFG = { on: false, sel: null, db: null, local: false, timer: null, applying: false };
+function setEdit(on) {
+  CFG.on = on; document.body.classList.toggle('editing', on); $('#cfgBtn').setAttribute('aria-pressed', on);
+  $('#cfgPanel').hidden = !on; if (on) { if (!fbEls.panel.hidden) openPanel(false); if (mode === 'tour' || mode === 'none') setMode('orbit'); renderCfg(); }
+  else { CFG.sel = null; hlSel.visible = hlHover.visible = false; }
+  $('#mapwrap').classList.toggle('fbhide', on || !fbEls.panel.hidden);
+}
+function selectEl(el) { CFG.sel = el; if (el) { hlSel.box.copy(elBounds(el)).expandByScalar(0.05); hlSel.visible = true; } else hlSel.visible = false; renderCfg(); }
+function renderCfg() {
+  const box2 = $('#cfgBody'); box2.textContent = '';
+  const el = CFG.sel;
+  $('#cfgTitle').textContent = el ? el.name : 'Aanpassen'; $('#cfgRoom').textContent = el ? el.room : 'Klik in het model op een tafel, gevel, vloer, scherm of wand';
+  $('#cfgPick').value = el ? el.id : '';
+  if (!el) { const p = document.createElement('p'); p.className = 'cfg-empty'; p.textContent = 'Elementen die je kunt aanpassen lichten op als je eroverheen beweegt. Je kunt ook hierboven een element kiezen.'; box2.appendChild(p); }
+  else for (const [k, p] of Object.entries(el.props)) {
+    const sec = document.createElement('section'); sec.className = 'cfg-prop';
+    const h = document.createElement('h3'); h.textContent = p.label; sec.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'cfg-opts';
+    for (const [val, label] of p.opts) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cfg-opt'; b.setAttribute('aria-pressed', el.values[k] === val);
+      const col = (p.sw && p.sw[val]) || SW[val];
+      if (col) { const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = col; b.appendChild(sw); }
+      const t = document.createElement('span'); t.textContent = label; b.appendChild(t);
+      if (val === p.def) { const d = document.createElement('i'); d.textContent = 'tekening'; b.appendChild(d); }
+      b.addEventListener('click', () => { el.values[k] = val; buildEl(el, true); renderCfg(); saveCfg(); });
+      grid.appendChild(b);
+    }
+    sec.appendChild(grid); box2.appendChild(sec);
+  }
+  const changed = ELS.filter(e => Object.entries(e.props).some(([k, p]) => e.values[k] !== p.def));
+  $('#cfgSum').textContent = changed.length ? changed.length + (changed.length === 1 ? ' element aangepast' : ' elementen aangepast') : 'Nog niets aangepast';
+  $('#cfgReset').hidden = !el || !Object.entries(el.props).some(([k, p]) => el.values[k] !== p.def);
+  $('#cfgView').hidden = !el || !el.view;
+}
+// keuzes bewaren: gedeeld (db) of in deze browser
+const CKEY = 'axia-nieuwbouw-keuzes';
+function cfgState() { const o = {}; for (const e of ELS) { const d = {}; for (const [k, p] of Object.entries(e.props)) if (e.values[k] !== p.def) d[k] = e.values[k]; if (Object.keys(d).length) o[e.id] = d; } return o; }
+function applyCfg(state) {
+  for (const e of ELS) { const want = {}; for (const [k, p] of Object.entries(e.props)) want[k] = (state[e.id] && state[e.id][k] && p.opts.some(o => o[0] === state[e.id][k])) ? state[e.id][k] : p.def;
+    if (Object.keys(want).some(k => want[k] !== e.values[k])) { e.values = want; buildEl(e, false); } }
+  if (CFG.on) renderCfg();
+}
+function saveCfg() {
+  clearTimeout(CFG.timer);
+  CFG.timer = setTimeout(async () => {
+    const values = cfgState();
+    if (CFG.db) { try { await CFG.db.doc('config/current').set({ values, at: new Date().toISOString(), by: FB.me || null }); $('#cfgSave').textContent = 'Keuzes opgeslagen en gedeeld'; } catch (e) { $('#cfgSave').textContent = 'Opslaan lukte niet'; } }
+    else { try { localStorage.setItem(CKEY, JSON.stringify(values)); } catch (e) { } $('#cfgSave').textContent = 'Keuzes bewaard in deze browser'; }
+  }, 500);
+}
+async function initCfg() {
+  if (FB.db) { CFG.db = FB.db; FB.db.doc('config/current').onSnapshot(snap => { if (snap.exists) applyCfg(snap.data().values || {}); }, () => { }); }
+  else { try { applyCfg(JSON.parse(localStorage.getItem(CKEY) || '{}')); } catch (e) { } }
+}
+
 /* ---------- loop ---------- */
 const clock = new THREE.Clock();
 const focus = new THREE.Vector3(), lastShadowFocus = new THREE.Vector3(1e9, 0, 0);
 let shadowExt = 0;
 function updateShadow() {
-  const near = mode === 'walk' || (mode === 'tour' && camera.position.y < 9 && Math.abs(camera.position.x - 20) < 60);
-  const ext = near ? 42 : 110;
-  if (near) focus.set(camera.position.x, 0, camera.position.z); else focus.copy(W(27, 45, 0));
-  if (near) { focus.x = Math.round(focus.x / 8) * 8; focus.z = Math.round(focus.z / 8) * 8; }
+  // één vaste schaduwkaart over het hele terrein: wordt alleen bij een ander tijdstip opnieuw berekend (geen haperingen tijdens het lopen)
+  const ext = 78; focus.copy(W(26, 38, 0));
   if (ext !== shadowExt) { const c = sun.shadow.camera; c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.near = 1; c.far = 600; c.updateProjectionMatrix(); shadowExt = ext; shadowDirty = true; }
   if (!focus.equals(lastShadowFocus)) { lastShadowFocus.copy(focus); shadowDirty = true; }
   if (!shadowDirty) return;
@@ -1949,10 +2250,10 @@ function updateShadow() {
 }
 let roomKey = '', frameNo = 0;
 // adaptieve resolutie: houdt rondlopen vloeiend op tragere apparaten
-let prCur = PR, ftAvg = 16, adaptT = 0;
+let prCur = PR0, ftAvg = 16, adaptT = 0, prMax = PR0;
 function adaptRes(raw) {
   if (raw > 0.25) return; ftAvg += (raw * 1000 - ftAvg) * 0.06; adaptT += raw; if (adaptT < 0.8) return; adaptT = 0;
-  let n = prCur; if (ftAvg > 27 && prCur > 0.85) n = Math.max(0.85, prCur - 0.15); else if (ftAvg < 16 && prCur < PR) n = Math.min(PR, prCur + 0.1);
+  let n = prCur; if (ftAvg > 24 && prCur > 0.8) n = Math.max(0.8, prCur - 0.15); else if (ftAvg < 13 && prCur < prMax) n = Math.min(prMax, prCur + 0.1);
   if (n !== prCur) { prCur = n; renderer.setPixelRatio(n); composer.setPixelRatio(n); finish.uniforms.uRes.value.set(innerWidth * n, innerHeight * n); }
 }
 // gewassen: vruchttrossen alleen dichtbij tekenen, bladeren tot op afstand
@@ -1987,7 +2288,7 @@ function frame() {
   finish.uniforms.uTime.value = t % 10;
   updateShadow();
   cullCrops();
-  bloom.enabled = preset === 'dusk' || mode !== 'walk';
+  bloom.enabled = preset === 'dusk' || (quality === 'mooi' && mode !== 'walk');
   if (mode === 'walk') {
     const lvl = player.feet > 2.5 ? 1 : 0, R = roomAt(player.x, player.y, lvl), key = R.n + lvl;
     if (key !== roomKey) { roomKey = key; $('#rcName').textContent = R.n; $('#rcMeta').textContent = (R.c ? R.c : '') + (R.a ? ' · ' + R.a + ' m²' : '') + (lvl ? ' · verdieping' : ''); $('#mapLvl').textContent = lvl ? 'Verdieping +3200' : 'Begane grond'; }
@@ -1995,6 +2296,7 @@ function frame() {
   }
   if (labelEls.length) updateLabels();
   if (pinEls.length) updatePins();
+  if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.6); hlSel.material.opacity = CFG.sel ? 1 : flashT; if (!CFG.sel && flashT === 0) hlSel.visible = false; }
   composer.render(dt);
   requestAnimationFrame(frame);
 }
@@ -2014,15 +2316,16 @@ async function boot() {
   buildTextures(); buildMaterials();
   setLoad(0.3, 'Bedrijfsruimte opbouwen…'); await tick();
   buildBuilding(); buildNeon();
+  defineElements(); for (const e of ELS) buildEl(e, false);
   // binnenverlichting: warme plafondlampen die echt licht geven in de belangrijkste ruimtes
-  for (const [x, y, z, I, d] of [[22.5, 12, 5.6, 14, 13], [17.6, 19.5, 5.8, 12, 12], [17.9, 10, 2.8, 4, 6], [13, 10.6, 2.8, 5, 8], [35, 20, 2.8, 7, 11], [32, 20, 6.4, 12, 14], [21.8, 20, 6.4, 6, 9], [6, 18.7, 2.8, 4, 7], [27.6, 21, 2.8, 4, 7], [6.5, 12, 2.8, 4, 8], [5, 4, 5.4, 6, 10]]) {
+  for (const [x, y, z, I, d] of [[21.5, 12.5, 5.8, 18, 15], [17.6, 19.5, 6.0, 14, 13], [32, 20, 6.6, 16, 15], [33, 20, 2.8, 8, 12], [12.5, 10.5, 2.8, 6, 10]]) {
     const L = new THREE.PointLight(0xfff0dc, I, d, 2); L.position.copy(W(x, y, z)); scene.add(L); interiorLights.push(L); }
   setLoad(0.5, 'Kas en gewassen plaatsen…'); await tick();
   buildGreenhouse(); buildCrops();
   setLoad(0.7, 'Omgeving opbouwen…'); await tick();
   buildSite(); buildTraffic(); buildSteam(); flushBatches(); drawPlans();
   setLoad(0.88, 'Licht berekenen…'); await tick();
-  applyPreset('morning');
+  applyPreset('morning'); try { if (localStorage.getItem('axia-q') === 'mooi' && !lowGPU) setQuality('mooi'); } catch (e) { }
   camera.position.copy(SHOTS[0].p[0]); camera.lookAt(SHOTS[0].q[0]);
   renderer.compile(scene, camera);
   setLoad(1, 'Klaar'); await tick();
@@ -2030,10 +2333,11 @@ async function boot() {
   requestAnimationFrame(frame);
   setTimeout(() => $('#loader')?.classList.add('out'), 250);
   window.__ready = true;
-  initFeedback().catch(() => { FB.local = true; FB.items = loadLocal(); renderList(); });
+  initFeedback().catch(() => { FB.local = true; FB.items = loadLocal(); renderList(); }).finally(() => initCfg());
+  { const sel = $('#cfgPick'); const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Kies een element…'; sel.appendChild(o0); for (const e of ELS) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; sel.appendChild(o); } }
 }
 boot().catch(err => { $('#ldtxt').textContent = 'Het 3D-model kon niet laden: ' + err.message + '. Probeer een recente versie van Chrome, Edge, Safari of Firefox.'; console.error(err); });
-window.__dbg = { get walkTarget() { return walkTarget; }, M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
+window.__dbg = { findPath, setWalkTarget, get walkTarget() { return walkTarget; }, M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
 </script>
 </body>
 </html>

@@ -10,6 +10,8 @@ Open `index.html` in een recente browser (internet nodig voor three.js en letter
 - **Maquette** – vrij draaien, met doorsneden per bouwlaag en ruimtelabels.
 - **Tomaten** – tomatenplanten aan de hoge draad met per vak een ander ras (rood, geel, oranje, bruin, cherry, roze, groen, paars); rassen gepresenteerd in kistjes in de demo- en presentatieruimte.
 - **Logo** – het originele Axia-logo zit ingebouwd (ook als `axia-logo.png`); op de kopgevel aan de weg als neonlogo dat 's avonds oplicht.
+- **Aanpassen** – klik op *Aanpassen* en daarna op een element (tafels, scherm en opstelling presentatieruimte, gevelvlakken raam/muur, vloeren, lattenwand en balie, keukeneiland, entreeluifel, gevelkleur). Rechts verschijnt een catalogus met opties die direct in het model veranderen; keuzes worden gedeeld opgeslagen.
+- **Kwaliteit** – *Snel* (standaard, vloeiend op pc) of *Mooi* (contactschaduwen en hogere resolutie).
 - **Feedback** – knop *Feedback* → *Opmerking op een plek* → klik in het model (of druk **F** tijdens het rondlopen). Ruimte, soort en standpunt worden meegeslagen; in de gedeelde (Claude-)pagina zijn de opmerkingen voor iedereen zichtbaar en kan Claude ze uitlezen en verwerken. Lokaal geopend worden ze alleen in de browser bewaard.
 - **Licht** – ochtend (zoals de dronefoto), middag en avond met kasbelichting.
 
