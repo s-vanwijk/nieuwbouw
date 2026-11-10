@@ -6,7 +6,7 @@
 <title>Nieuwbouw Axia Naaldwijk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@600;800&display=swap">
 <style>
 /* Layout: full-bleed WebGL stage; UI floats on it as smoked-glass instrument panels, like a site-presentation screen. */
 :root{
@@ -50,7 +50,8 @@ body.tour .lb{transform:none}
 
 /* brand block */
 #brand{position:fixed;z-index:10;top:calc(14px + env(safe-area-inset-top,0px));left:calc(16px + env(safe-area-inset-left,0px));display:grid;gap:4px;pointer-events:none;text-shadow:0 1px 12px rgba(0,0,0,.5)}
-#brand b{font-weight:700;font-stretch:120%;font-size:15px;letter-spacing:.02em}
+#brand canvas{width:138px;height:56px;display:block;background:#fff;border-radius:8px;padding:6px 8px;box-sizing:content-box;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.ld canvas{width:172px;height:70px;background:#fff;border-radius:10px;padding:8px 10px;box-sizing:content-box}
 #brand span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 body.tour #brand{top:calc(9vh + 14px)}
 
@@ -104,7 +105,7 @@ body.tour #dock{opacity:0;pointer-events:none}
 #legend b{color:var(--ink);font-weight:600}
 @media (max-width:720px){
   #minimap{width:132px;height:132px}
-  #brand b{font-size:13px}
+  #brand canvas{width:98px;height:40px}
   #legend{display:none}
   .lbl{display:none}
   .btn{padding:7px 9px;font-size:12px}
@@ -118,6 +119,7 @@ body.tour #dock{opacity:0;pointer-events:none}
 
 <div id="loader">
   <div class="ld">
+    <canvas id="ldLogo" width="492" height="200" role="img" aria-label="Axia Vegetable Seeds"></canvas>
     <div class="eyebrow">218300-B · Hoge Noordweg 6a · Naaldwijk</div>
     <h1>Nieuwbouw bedrijfsruimte</h1>
     <p>3D-impressie op basis van de plattegronden begane grond en verdieping (schaal 1:100), met de kas eromheen.</p>
@@ -130,7 +132,7 @@ body.tour #dock{opacity:0;pointer-events:none}
 <div id="fade"></div>
 
 <header id="brand">
-  <b>Axia Vegetable Seeds</b>
+  <canvas id="brandLogo" width="492" height="200" role="img" aria-label="Axia Vegetable Seeds"></canvas>
   <span>Nieuwbouw bedrijfsruimte · Naaldwijk</span>
 </header>
 
@@ -619,6 +621,29 @@ function pendant(x0, y0, x1, y1, z) { // linear pendant luminaire
   for (const s of [-1, 1]) { const px = hor ? cx + s * L : cx, py = hor ? cy : cy + s * L; box('black', px - 0.005, py - 0.005, z + 0.06, px + 0.005, py + 0.005, z + 2); }
 }
 
+/* ---------- Axia-logo: origineel bestand indien aanwezig (axia-logo.png), anders vector-nabouw ---------- */
+let logoImg = null;
+const LOGO_W = 1064, LOGO_H = 432, LOGO_BLUE = '#0b4a8b', LOGO_GREEN = '#1fa23b';
+function drawLogo(g, x, y, H, opt = {}) {
+  const k = H / LOGO_H;
+  if (logoImg) { g.drawImage(logoImg, x, y, LOGO_W * k, H); return LOGO_W * k; }
+  g.save(); g.translate(x, y); g.scale(k, k);
+  const drop = (cx, tip, cy, r) => { g.beginPath(); g.moveTo(cx, tip); g.bezierCurveTo(cx + r * 0.2, tip + (cy - tip) * 0.35, cx + r, cy - r * 0.9, cx + r, cy); g.arc(cx, cy, r, 0, Math.PI); g.bezierCurveTo(cx - r, cy - r * 0.9, cx - r * 0.2, tip + (cy - tip) * 0.35, cx, tip); g.closePath(); g.fill(); };
+  g.fillStyle = LOGO_GREEN; drop(90, 0, 178, 90);
+  g.fillStyle = opt.bg || '#fff'; drop(90, 70, 196, 54); g.fillRect(84, 0, 12, 120);
+  g.fillStyle = LOGO_BLUE; drop(90, 168, 218, 24);
+  if (!opt.emblemOnly) {
+    g.fillStyle = LOGO_BLUE; g.textBaseline = 'alphabetic';
+    let fs = 320; g.font = `800 ${fs}px Nunito, "Arial Rounded MT Bold", Arial, sans-serif`; const w = g.measureText('axia').width; fs *= 590 / w; g.font = `800 ${fs}px Nunito, "Arial Rounded MT Bold", Arial, sans-serif`;
+    g.fillText('axia', 205, 212);
+    g.lineWidth = 26; g.strokeStyle = LOGO_BLUE; g.lineCap = 'round'; g.beginPath(); g.moveTo(780, 150); g.bezierCurveTo(860, 128, 960, 120, 1000, 180); g.stroke();
+    g.fillStyle = LOGO_GREEN; let f2 = 120; g.font = `600 ${f2}px Nunito, Arial, sans-serif`; const w2 = g.measureText('vegetable seeds').width; f2 *= 745 / w2; g.font = `600 ${f2}px Nunito, Arial, sans-serif`;
+    g.fillText('vegetable seeds', 318, 405);
+  }
+  g.restore(); return LOGO_W * k;
+}
+function paintLogoCanvas(id) { const c = document.getElementById(id); if (!c) return; const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); drawLogo(g, 0, 0, c.height); }
+
 /* ---------- screens & signage (own UVs) ---------- */
 function canvasPlane(w, h, draw, pos, rotY, opts = {}) {
   const c = document.createElement('canvas'); c.width = Math.round(512 * w / h); c.height = 512; draw(c.getContext('2d'), c.width, c.height);
@@ -634,6 +659,7 @@ function drawScreen(title, sub) {
     g.fillStyle = 'rgba(143,191,106,.18)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(w * (0.55 + i * 0.05), h * 0.95, 30, 160 + i * 18, -0.2 + i * 0.05, 0, 7); g.fill(); }
     g.fillStyle = '#eef1ec'; g.font = `700 ${h * 0.13}px Archivo, Arial, sans-serif`; g.fillText(title, w * 0.07, h * 0.42);
     g.fillStyle = '#f2a541'; g.font = `500 ${h * 0.055}px "IBM Plex Mono", monospace`; g.fillText(sub, w * 0.07, h * 0.55);
+    g.fillStyle = '#fff'; g.fillRect(w * 0.07 - 10, h * 0.66, h * 0.16 * LOGO_W / LOGO_H + 20, h * 0.16 + 20); drawLogo(g, w * 0.07, h * 0.66 + 10, h * 0.16);
   };
 }
 
@@ -764,7 +790,7 @@ function buildBuilding() {
   table(4.6, 19.6, 7.6, 21.0); chair(5.3, 19.2, 'n'); chair(6.9, 19.2, 'n'); box('black', 5.2, 20.5, 0.75, 5.9, 20.55, 1.15); box('black', 6.4, 20.5, 0.75, 7.1, 20.55, 1.15);
   table(4.4, 16.6, 6.0, 17.6); chairsAround(4.4, 16.6, 6.0, 17.6); box('oak', 8.15, 17.5, 0, 8.55, 20.5, 1.9, { col: true }); plant(4.0, 20.9, 0.9);
   // Kantine 0.05
-  table(11.6, 11.6, 15.6, 12.4); chairsAround(11.6, 11.6, 15.6, 12.4);
+  table(11.6, 11.6, 15.6, 12.4); chairsAround(11.6, 11.6, 15.6, 12.4); bowl(13.6, 12.0, 0.75);
   table(11.2, 8.8, 12.0, 10.4); chairsAround(11.2, 8.8, 12.0, 10.4); table(13.6, 8.8, 14.4, 10.4); chairsAround(13.6, 8.8, 14.4, 10.4);
   counter(10.27, 10.0, 10.9, 13.2); box('white', 10.27, 9.3, 0, 10.9, 9.95, 2.0, { col: true }); box('black', 10.9, 9.35, 1.0, 10.91, 9.9, 1.05);
   // Techn. dienst 0.09
@@ -776,10 +802,10 @@ function buildBuilding() {
   for (const x of [16.85, 18.45]) { box('blue', x, 12.0, 0, x + 0.5, 13.7, 1.05, { col: true }); box('black', x + 0.05, 12.05, 1.05, x + 0.45, 13.65, 1.12); }
   box('black', 17.0, 8.3, 0.008, 18.8, 10.2, 0.02); sofa(16.15, 9.2, 16.7, 11.0, 'e');
   // Ontvangstruimte 0.03 — lange tafel, bank
-  table(22.1, 9.6, 23.1, 14.0); chairsAround(22.1, 9.6, 23.1, 14.0, 'fabric');
+  table(22.1, 9.6, 23.1, 14.0); chairsAround(22.1, 9.6, 23.1, 14.0, 'fabric'); bowl(22.6, 10.6, 0.75); bowl(22.6, 11.8, 0.75, 20, 0.2); bowl(22.6, 13.0, 0.75);
   box('accentWall', 19.85, 12.4, 0, 19.95, 15.8, 3.0); plant(24.4, 8.6, 1.3); plant(20.3, 8.6, 1.0);
   // Hal 0.02 — keukeneiland, garderobe, zitbank
-  counter(21.2, 17.3, 23.8, 18.0, 0.95); for (let x = 21.5; x < 23.7; x += 0.6) { box('black', x - 0.02, 16.9, 0, x + 0.02, 16.94, 0.7); box('fabric', x - 0.18, 16.75, 0.68, x + 0.18, 17.1, 0.74); }
+  counter(21.2, 17.3, 23.8, 18.0, 0.95); bowl(22.0, 17.65, 0.95, 14); crateRow(22.6, 23.6, 17.5, 0.95, 6); for (let x = 21.5; x < 23.7; x += 0.6) { box('black', x - 0.02, 16.9, 0, x + 0.02, 16.94, 0.7); box('fabric', x - 0.18, 16.75, 0.68, x + 0.18, 17.1, 0.74); }
   counter(23.85, 19.3, 24.45, 21.3, 0.92); lockers(5.0, 23.4, 10.8, 23.85, 1.9); box('oak', 11.2, 22.9, 0, 12.8, 23.5, 0.45, { col: true });
   sofa(0.3, 12.0, 1.1, 14.4, 'w'); plant(0.6, 20.5, 1.2); plant(16.5, 23.4, 1.1); plant(24.6, 23.5, 1.0);
   // Sanitair, kleedruimtes
@@ -790,14 +816,15 @@ function buildBuilding() {
   // Spreekkamer 0.11
   table(27.1, 20.0, 28.3, 22.6); chairsAround(27.1, 20.0, 28.3, 22.6, 'fabric2');
   canvasPlane(2.0, 1.15, drawScreen('Welkom', 'SPREEKKAMER 0.11'), W(30.13, 21.3, 1.55), -Math.PI / 2, { emissive: 0.9 });
-  // Demoruimte 0.13 — teelttafels met jonge planten
-  for (const y of [17.6, 20.2]) { table(31.2, y, 38.8, y + 1.4, 0.85, 'white'); for (let x = 31.5; x < 38.6; x += 0.45) for (let k = 0; k < 3; k++) plantSpots.push([x, y + 0.25 + k * 0.45, 0.85, 0.35, 'tray']); }
-  box('oak', 31.2, 23.1, 0, 35.0, 23.7, 0.9, { col: true }); plant(39.4, 23.5, 1.2);
+  // Demoruimte 0.13 — tomatenrassen in kistjes
+  for (const [i, y] of [[0, 17.6], [1, 20.2]]) { table(31.2, y, 38.8, y + 1.4, 0.85, 'white'); for (let k = 0; k < 3; k++) crateRow(31.35, 38.65, y + 0.1 + k * 0.42, 0.85, i * 4 + k * 2); }
+  for (const x of [31.6, 33.2, 34.8, 36.4, 38.0]) { plant(x, 23.95 - 0.35, 1.0); }
+  plant(39.4, 16.6, 1.2);
   // Presentatieruimte 1.02 — scherm op wand I, stoelen gericht naar het westen
-  canvasPlane(3.6, 2.0, drawScreen('Rassenpresentatie', 'PRESENTATIERUIMTE 1.02'), W(24.93, 19.2, FL1 + 1.95), Math.PI / 2, { emissive: 1.0 });
+  canvasPlane(3.6, 2.0, drawScreen('Tomatenrassen', 'RASSENPRESENTATIE · 1.02'), W(24.93, 19.2, FL1 + 1.95), Math.PI / 2, { emissive: 1.0 });
   box('black', 25.3, 18.8, FL1, 25.9, 19.6, FL1 + 1.1, { col: true });
   for (let x = 28.0; x <= 35.0; x += 1.4) for (let y = 17.0; y <= 21.6; y += 0.62) { if (Math.abs(y - 19.3) < 0.4) continue; chair(x, y, 'w', 'fabric', FL1); }
-  table(36.6, 17.2, 38.8, 18.4, FL1 + 0.95, 'oak'); box('oak', 36.6, 17.2, FL1, 38.8, 18.4, FL1 + 0.95, { col: true });
+  table(36.6, 17.2, 38.8, 18.4, FL1 + 0.95, 'oak'); box('oak', 36.6, 17.2, FL1, 38.8, 18.4, FL1 + 0.95, { col: true }); crateRow(36.7, 38.7, 17.3, FL1 + 0.95, 0); crateRow(36.7, 38.7, 17.95, FL1 + 0.95, 4);
   plant(39.4, 16.6, 1.2, FL1); plant(25.4, 16.6, 1.1, FL1);
   // Ruimte 1.01
   table(21.2, 18.0, 23.4, 19.2, FL1 + 0.75); colliders.push({ x0: 21.2, y0: 18, x1: 23.4, y1: 19.2, z0: FL1, z1: FL1 + 0.8, active: true });
@@ -809,11 +836,7 @@ function buildBuilding() {
   // --- buitenzijde entree: luifel, belettering
   box('trim', 15.6, 6.2, 3.25, 20.2, 8, 3.45); box('led', 15.8, 6.4, 3.24, 20.0, 6.5, 3.25);
   for (const x of [15.8, 20.0]) box('steel', x - 0.06, 6.3, 0, x + 0.06, 6.42, 3.25, { col: true });
-  canvasPlane(7.0, 1.4, (g, w, h) => {
-    g.clearRect(0, 0, w, h); g.fillStyle = '#20302a'; g.font = `800 ${h * 0.62}px Archivo, Arial, sans-serif`; g.textBaseline = 'middle';
-    g.fillText('AXIA', 0, h * 0.42); const tw = g.measureText('AXIA').width;
-    g.font = `600 ${h * 0.2}px Archivo, Arial, sans-serif`; g.fillStyle = '#3b6b45'; g.fillText('VEGETABLE SEEDS', tw + h * 0.25, h * 0.52);
-  }, W(13.2, 7.86, 5.4), 0, { transparent: true });
+  canvasPlane(2.3 * LOGO_W / LOGO_H, 2.3, (g, w, h) => { g.clearRect(0, 0, w, h); drawLogo(g, 0, 0, h, { bg: '#d7dadc' }); }, W(13.2, 7.86, 5.05), 0, { transparent: true });
 }
 
 /* ==========================================================================
@@ -879,53 +902,88 @@ function buildGreenhouse() {
   // proeftafels in strook G3
   for (let x = 47; x < 106; x += 4.2) { box('alu', x, 17.2, 0.7, x + 3.0, 22.8, 0.78, { col: true }); for (let xx = x + 0.2; xx < x + 2.9; xx += 0.42) for (let yy = 17.5; yy < 22.6; yy += 0.42) plantSpots.push([xx, yy, 0.78, 0.33, 'tray']); }
 }
-// gewassen: rijen
+// gewassen: tomaten aan de hoge draad, per vak een ander ras
+const TOMATO = [ // kleur, vruchtgrootte (m), tros-type
+  { n: 'rood trostomaat', c: 0xc42a1c, r: 0.042 }, { n: 'geel', c: 0xe9c11f, r: 0.04 }, { n: 'cherry rood', c: 0xd0281e, r: 0.019, cherry: true },
+  { n: 'oranje', c: 0xe8761c, r: 0.04 }, { n: 'bruin/chocolade', c: 0x5e2a1c, r: 0.043 }, { n: 'cherry geel', c: 0xf0b81e, r: 0.019, cherry: true },
+  { n: 'roze vleestomaat', c: 0xd9574a, r: 0.055 }, { n: 'groen gestreept', c: 0x86a03a, r: 0.042 }, { n: 'cocktail paars', c: 0x6a1f2a, r: 0.028 }];
+// sphere with smooth normals (works on a non-indexed icosahedron)
+function sphereGeo(r, cx, cy, cz, sx = 1, sy = 1, sz = 1, detail = 0) {
+  const g0 = new THREE.IcosahedronGeometry(1, detail), g = g0.index ? g0.toNonIndexed() : g0; const p = g.attributes.position, n = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const l = Math.hypot(x / sx, y / sy, z / sz) || 1; n.set([x / sx / l, y / sy / l, z / sz / l], i * 3); p.setXYZ(i, cx + x * r * sx, cy + y * r * sy, cz + z * r * sz); }
+  g.setAttribute('normal', new THREE.BufferAttribute(n, 3)); return g;
+}
+const cropChunks = [];
 function buildCrops() {
-  const blobs = [], fruits = [], pipes = [];
-  const dens = lowGPU ? 0.9 : 0.55;
-  const zone = (x0, x1, y0, y1, kind) => {
-    for (let x = x0 + 0.8; x < x1 - 0.5; x += 1.6) {
-      pipes.push([x, y0, y1]);
-      colliders.push({ x0: x - 0.32, x1: x + 0.32, y0, y1, z0: 0, z1: 3, active: true });
-      for (let y = y0 + 0.3; y < y1 - 0.2; y += dens) {
-        const k = typeof kind === 'function' ? kind(x) : kind;
-        const jx = rr(-0.06, 0.06);
-        if (k === 'tomato' || k === 'cucumber') {
-          blobs.push([x + jx, y, 1.15 + rr(-.1, .1), 0.36, 1.0, k]); blobs.push([x + jx, y + dens / 2, 2.35 + rr(-.15, .15), 0.32, 0.8, k]);
-          const nF = k === 'tomato' ? 3 : 2; for (let f = 0; f < nF; f++) if (rnd() < 0.6) fruits.push([x + rr(-0.3, 0.3), y + rr(-0.2, 0.2), rr(0.5, 1.4), k]);
-        } else if (k === 'pepper') {
-          blobs.push([x + jx, y, 0.95 + rr(-.08, .08), 0.42, 0.75, k]); for (let f = 0; f < 2; f++) if (rnd() < 0.55) fruits.push([x + rr(-0.35, 0.35), y + rr(-0.2, 0.2), rr(0.5, 1.2), k]);
-        } else { blobs.push([x + jx, y, 0.32, 0.3, 0.25, k]); }
+  const dens = lowGPU ? 0.8 : 0.6;
+  // één plant = steel + drie bladpakketten (onderste blad is weggeplukt, zoals bij tomaat gebruikelijk)
+  const stem = new THREE.CylinderGeometry(0.012, 0.014, 2.9, 4, 1, true).toNonIndexed(); stem.translate(0, 0.6 + 1.45, 0); stem.deleteAttribute('uv');
+  const plantGeo = mergeGeometries([stem, sphereGeo(0.34, 0.07, 1.55, 0.05, 0.85, 0.85, 1.6), sphereGeo(0.34, -0.08, 1.98, -0.06, 0.85, 0.9, 1.55), sphereGeo(0.33, 0.06, 2.4, 0.04, 0.8, 0.9, 1.6), sphereGeo(0.3, -0.06, 2.8, -0.05, 0.8, 0.85, 1.55), sphereGeo(0.25, 0.03, 3.18, 0.02, 0.75, 0.9, 1.4)].map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
+  const truss = (cherry, r) => {
+    const parts = [], n = cherry ? 10 : 6;
+    for (const [side, z0] of [[1, 1.35], [-1, 0.95], [1, 0.62]]) for (let k = 0; k < n; k++) { const t = k / (n - 1); parts.push(sphereGeo(r, side * (0.12 + t * 0.12) + (k % 2 ? 0.03 : -0.03) * (cherry ? 1 : 0.6), z0 - t * (cherry ? 0.22 : 0.3), (k % 2 ? 0.035 : -0.035))); }
+    return mergeGeometries(parts.map(g => { g.deleteAttribute('uv'); return g; }));
+  };
+  const tCache = {}; const trussFor = V => tCache[V.n] || (tCache[V.n] = truss(!!V.cherry, V.r));
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78 }); leafMat.clippingPlanes = CLIP;
+  const fruitMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.0 }); fruitMat.clippingPlanes = CLIP;
+  const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
+  const pipes = []; let vi = 0;
+  const zone = (x0, x1, y0, y1) => {
+    for (let bx = x0; bx < x1 - 0.5; bx += 9.6) {
+      const V = TOMATO[vi++ % TOMATO.length], rowsX = [];
+      for (let x = bx + 0.8; x < Math.min(bx + 9.6, x1 - 0.5); x += 1.6) rowsX.push(x);
+      const spots = [];
+      for (const x of rowsX) {
+        pipes.push([x, y0, y1]);
+        colliders.push({ x0: x - 0.32, x1: x + 0.32, y0, y1, z0: 0, z1: 3, active: true });
+        box('white', x - 0.13, y0, 0.42, x + 0.13, y1, 0.56);                 // teeltgoot
+        box('white', x - 0.01, y0, 3.55, x + 0.01, y1, 3.57);                 // draaddraad
+        for (let y = y0 + 0.3; y < y1 - 0.2; y += dens) spots.push([x + rr(-0.04, 0.04), y + rr(-0.05, 0.05)]);
       }
+      if (!spots.length) continue;
+      const lm = inst(plantGeo, leafMat, spots.length, false), tm = inst(trussFor(V), fruitMat, spots.length, false);
+      spots.forEach(([x, y], i) => {
+        q.setFromAxisAngle(_up, (rnd() < 0.5 ? 0 : Math.PI) + rr(-0.35, 0.35)); const s2 = rr(0.9, 1.1);
+        mtx.compose(pv.set(x, 0, -y), q, sc.set(s2, rr(0.92, 1.08), s2)); lm.setMatrixAt(i, mtx);
+        c.setRGB(0.2 * rr(.8, 1.15), 0.4 * rr(.85, 1.12), 0.17 * rr(.75, 1.2)).convertSRGBToLinear(); lm.setColorAt(i, c);
+        mtx.compose(pv.set(x, 0, -y), q, sc.set(1, rr(0.95, 1.05), 1)); tm.setMatrixAt(i, mtx);
+        c.set(V.c); c.offsetHSL(rr(-0.01, 0.01), 0, rr(-0.04, 0.04)); tm.setColorAt(i, c);
+      });
+      lm.computeBoundingSphere(); tm.computeBoundingSphere();
+      cropChunks.push({ x0: bx, x1: bx + 9.6, y0, y1, leaves: lm, fruit: tm, variety: V.n });
     }
   };
-  zone(-20, 110, 29.5, 79.5, x => x < 35 ? 'tomato' : x < 70 ? 'pepper' : 'cucumber');
-  zone(25, 110, -34.5, 10.5, x => x < 55 ? 'pepper' : x < 80 ? 'tomato' : 'lettuce');
-  const geo = new THREE.IcosahedronGeometry(1, 1);
-  { const pos = geo.attributes.position; for (let i = 0; i < pos.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(pos, i); v.multiplyScalar(1 + (Math.sin(v.x * 9) * Math.cos(v.y * 7) * Math.sin(v.z * 8)) * 0.18); pos.setXYZ(i, v.x, v.y, v.z); } geo.computeVertexNormals(); }
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 }); leafMat.clippingPlanes = CLIP;
-  const bm = inst(geo, leafMat, blobs.length, false);
-  const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
-  const tones = { tomato: [0.28, 0.5, 0.2], cucumber: [0.3, 0.55, 0.22], pepper: [0.25, 0.46, 0.18], lettuce: [0.45, 0.62, 0.25] };
-  blobs.forEach(([x, y, z, r, h, k], i) => { q.setFromAxisAngle(_up, rnd() * 6.28); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r * rr(.85, 1.15), h * 0.9, r * rr(.85, 1.15))); bm.setMatrixAt(i, mtx); const t = tones[k]; c.setRGB(t[0] * rr(.75, 1.15), t[1] * rr(.8, 1.12), t[2] * rr(.7, 1.2)).convertSRGBToLinear(); bm.setColorAt(i, c); });
-  const fm = inst(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 }), fruits.length, false);
-  fm.material.clippingPlanes = CLIP;
-  fruits.forEach(([x, y, z, k], i) => {
-    const sc = k === 'cucumber' ? new THREE.Vector3(0.035, 0.16, 0.035) : k === 'pepper' ? new THREE.Vector3(0.05, 0.07, 0.05) : new THREE.Vector3(0.045, 0.045, 0.045);
-    mtx.compose(new THREE.Vector3(x, z, -y), q.identity(), sc); fm.setMatrixAt(i, mtx);
-    if (k === 'tomato') c.set(rnd() < .8 ? 0xc8321e : 0xd88a2a); else if (k === 'pepper') c.set(pick([0xd12a1c, 0xe8b21c, 0xe36d1a, 0x3c7a2a])); else c.set(0x3e6e2a);
-    fm.setColorAt(i, c);
-  });
+  zone(-20, 110, 29.5, 79.5);
+  zone(25, 110, -34.5, 10.5);
   const pm = inst(new THREE.CylinderGeometry(0.026, 0.026, 1, 6), M.alu, pipes.length * 2, false);
   pipes.forEach(([x, y0, y1], i) => { for (const s2 of [-1, 1]) { mtx.compose(new THREE.Vector3(x + s2 * 0.28, 0.16, -(y0 + y1) / 2), new THREE.Quaternion().setFromAxisAngle(_upX, Math.PI / 2), new THREE.Vector3(1, y1 - y0, 1)); pm.setMatrixAt(i * 2 + (s2 > 0 ? 1 : 0), mtx); } });
-  // potplanten & proefbakjes binnen
+  // potplanten & jonge tomatenplanten in trays
+  const geo = sphereGeo(1, 0, 0, 0, 1, 1, 1, 1);
   const sm = inst(geo, leafMat, plantSpots.length, false);
   plantSpots.forEach(([x, y, z, s2, kind], i) => {
-    if (kind === 'tray') { mtx.compose(new THREE.Vector3(x, z + 0.08, -y), q.setFromAxisAngle(_up, rnd() * 6), new THREE.Vector3(0.17, 0.11, 0.17)); c.setRGB(0.35 * rr(.8, 1.2), 0.6 * rr(.85, 1.1), 0.22).convertSRGBToLinear(); }
+    if (kind === 'tray') { mtx.compose(new THREE.Vector3(x, z + 0.1, -y), q.setFromAxisAngle(_up, rnd() * 6), new THREE.Vector3(0.15, 0.14, 0.15)); c.setRGB(0.25 * rr(.8, 1.2), 0.48 * rr(.85, 1.1), 0.2).convertSRGBToLinear(); }
     else { mtx.compose(new THREE.Vector3(x, z + 0.55 * s2, -y), q.setFromAxisAngle(_up, rnd() * 6), new THREE.Vector3(0.45 * s2, 0.65 * s2, 0.45 * s2)); c.setRGB(0.22, 0.42, 0.18).convertSRGBToLinear(); }
     sm.setMatrixAt(i, mtx); sm.setColorAt(i, c);
   });
+  // gepresenteerde tomaten (kistjes, schalen)
+  const dm = inst(sphereGeo(1, 0, 0, 0, 1, 0.86, 1, 1), fruitMat, displayFruit.length, true);
+  displayFruit.forEach(([x, y, z, r, col], i) => { q.setFromAxisAngle(_up, rnd() * 6); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r, r, r)); dm.setMatrixAt(i, mtx); c.set(col); c.offsetHSL(rr(-0.012, 0.012), 0, rr(-0.05, 0.05)); dm.setColorAt(i, c); });
 }
+// tomaten presenteren: kistje met één ras, of een schaal met een mix
+const displayFruit = [];
+function crate(x0, y0, z, V, w = 0.4, d = 0.3) {
+  box('oak', x0, y0, z, x0 + w, y0 + d, z + 0.02); box('oak', x0, y0, z, x0 + w, y0 + 0.012, z + 0.09); box('oak', x0, y0 + d - 0.012, z, x0 + w, y0 + d, z + 0.09);
+  box('oak', x0, y0, z, x0 + 0.012, y0 + d, z + 0.09); box('oak', x0 + w - 0.012, y0, z, x0 + w, y0 + d, z + 0.09);
+  const r = V.r, st = r * 2.05;
+  for (let x = x0 + 0.02 + r; x < x0 + w - 0.015 - r * 0.6; x += st) for (let y = y0 + 0.02 + r; y < y0 + d - 0.015 - r * 0.6; y += st) displayFruit.push([x + rr(-0.003, 0.003), y + rr(-0.003, 0.003), z + 0.02 + r * 0.86, r, V.c]);
+  if (V.cherry || V.r < 0.03) for (let x = x0 + 0.03 + r * 2; x < x0 + w - 0.03 - r; x += st * 1.4) for (let y = y0 + 0.03 + r * 2; y < y0 + d - 0.03 - r; y += st * 1.4) displayFruit.push([x, y, z + 0.02 + r * 2.4, r, V.c]);
+}
+function bowl(cx, cy, z, n = 16, rad = 0.18) {
+  const g = new THREE.CylinderGeometry(rad, rad * 0.6, 0.08, 20); g.translate(cx, z + 0.04, -cy); addGeo('white', g);
+  for (let i = 0; i < n; i++) { const V = pick(TOMATO), a = rnd() * 6.28, rr2 = Math.sqrt(rnd()) * (rad - V.r - 0.02); displayFruit.push([cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2, z + 0.08 + V.r * (0.8 + (1 - rr2 / rad) * 1.4), V.r, V.c]); }
+}
+function crateRow(x0, x1, y, z, start = 0) { let k = start; for (let x = x0; x + 0.4 <= x1 + 1e-3; x += 0.46) crate(x, y, z, TOMATO[k++ % TOMATO.length]); }
 
 /* ==========================================================================
    OMGEVING — voorplein, parkeren, weg, sloot, kassengebied
@@ -936,17 +994,18 @@ function buildSite() {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.3; ground.receiveShadow = true;
   const uv = ground.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2400, uv.getY(i) * 2400); scene.add(ground);
   const flat = (k, x0, y0, x1, y1, z = 0) => box(k, x0, y0, z - 0.02, x1, y1, z);
-  flat('asphalt', -16, -38, 25, 0); flat('asphalt', -16, 0, 0, 24); flat('asphalt', -50, 24, -20, 32); flat('asphalt', 10.3, 0, 25, 2);
-  flat('paving', 10.3, 2, 25, 8, 0.012); flat('paving', 15.0, -3, 20.8, 2, 0.012); flat('paving', -20, 24, -16, 30, 0.012);
-  flat('asphalt', -500, -45, 500, -39); flat('asphalt', 10, -39, 22, -38);
+  flat('asphalt', -12, -21, 25, 0); flat('asphalt', -12, 0, 0, 24); flat('asphalt', 12, -39, 20, -21); flat('asphalt', -50, 24, -20, 32); flat('asphalt', 10.3, 0, 25, 2);
+  flat('paving', 10.3, 2, 25, 8, 0.012); flat('paving', 15.0, -3, 20.8, 2, 0.012); flat('paving', -20, 24, -12, 30, 0.012); flat('asphalt', -12, 24, -20, 30);
+  flat('asphalt', -500, -45, 500, -39);
   for (let x = -495; x < 500; x += 9) flat('paint', x, -42.07, x + 4.5, -41.93, 0.012);
   flat('paint', -500, -44.6, 500, -44.45, 0.012); flat('paint', -500, -39.55, 500, -39.4, 0.012);
   // parkeervakken
   const bays = [];
   for (let x = 10.6; x < 15.6; x += 2.6) bays.push([x, -9, x + 2.5, -3.5, 'n']);
   for (let x = 20.6; x < 25; x += 2.6) bays.push([x, -9, x + 2.5, -3.5, 'n']);
-  for (let x = -14.5; x < 24.5; x += 2.6) bays.push([x, -20, x + 2.5, -14.5, 's']);
-  for (let y = 2; y < 22; y += 2.6) bays.push([-15.5, y, -10, y + 2.5, 'e']);
+  for (let x = 1.6; x < 9.5; x += 2.6) bays.push([x, -20.5, x + 2.5, -15, 's']);
+  for (let x = 20.6; x < 24.5; x += 2.6) bays.push([x, -20.5, x + 2.5, -15, 's']);
+  for (let y = 2; y < 22; y += 2.6) bays.push([-11.5, y, -6, y + 2.5, 'e']);
   for (const [x0, y0, x1, y1] of bays) { if (x1 - x0 < y1 - y0) { flat('paint', x0, y0, x0 + 0.1, y1, 0.012); flat('paint', x1, y0, x1 + 0.1, y1, 0.012); } else { flat('paint', x0, y0, x1, y0 + 0.1, 0.012); flat('paint', x0, y1, x1, y1 + 0.1, 0.012); } }
   buildCars(bays.filter(() => rnd() < 0.7));
   // sloten
@@ -959,18 +1018,18 @@ function buildSite() {
     const x = 6.4 + i * 1.6, y = -2.2;
     box('pole', x - 0.05, y - 0.05, 0, x + 0.05, y + 0.05, 8.5, { col: true });
     const g = new THREE.PlaneGeometry(2.4, 1.5, 18, 8); g.translate(1.2, 0, 0);
-    const c = document.createElement('canvas'); c.width = 256; c.height = 160; const cx = c.getContext('2d');
-    cx.fillStyle = i === 1 ? '#f2f3ee' : '#3b6b45'; cx.fillRect(0, 0, 256, 160); cx.fillStyle = i === 1 ? '#3b6b45' : '#f2f3ee'; cx.font = '800 58px Archivo, Arial, sans-serif'; cx.fillText('axia', 40, 100);
+    const c = document.createElement('canvas'); c.width = 512; c.height = 320; const cx = c.getContext('2d');
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, 512, 320); drawLogo(cx, 40, 85, 175);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const f = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.85 }));
     f.position.set(x + 0.05, 7.6, -y); f.rotation.y = 0.35; f.castShadow = true; scene.add(f); flags.push({ mesh: f, base: g.attributes.position.array.slice(), ph: i * 1.3 });
   }
   // zuil met naam bij inrit
-  box('trim', 21.5, -36.5, 0, 22.0, -34.5, 2.6, { col: true });
-  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#2c3134'; g.fillRect(0, 0, w, h); g.fillStyle = '#eef1ec'; g.font = `800 ${w * 0.26}px Archivo, Arial, sans-serif`; g.fillText('AXIA', w * 0.1, h * 0.3); g.fillStyle = '#8fbf6a'; g.font = `500 ${w * 0.075}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.1, h * 0.44); }, W(21.49, -35.5, 1.35), -Math.PI / 2);
+  box('trim', 21.5, -36.5, 0, 22.0, -34.5, 2.6, { col: true }); box('grass', 0, -20.9, 0, 1.4, -15, 0.06); box('grass', 10, -20.9, 0, 12, -15, 0.06);
+  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(21.49, -35.5, 1.35), -Math.PI / 2);
   // straatverlichting
   for (let x = -120; x < 200; x += 28) { box('pole', x - 0.07, -38.2, 0, x + 0.07, -38.06, 7.5, { col: true }); box('pole', x - 0.05, -39.6, 7.4, x + 0.05, -38.1, 7.5); box('streetlamp', x - 0.2, -40.2, 7.25, x + 0.2, -39.4, 7.4); }
-  for (const [x, y] of [[12, -1], [24, -1], [-13, -10], [-1, -24], [8, -24], [-2, 6]]) { box('pole', x - 0.08, y - 0.08, 0, x + 0.08, y + 0.08, 4.2, { col: true }); box('streetlamp', x - 0.35, y - 0.12, 4.05, x + 0.35, y + 0.12, 4.2); }
+  for (const [x, y] of [[12, -1], [24, -1], [-10, -12], [0.5, -21.5], [10.5, -21.5], [-2, 6]]) { box('pole', x - 0.08, y - 0.08, 0, x + 0.08, y + 0.08, 4.2, { col: true }); box('streetlamp', x - 0.35, y - 0.12, 4.05, x + 0.35, y + 0.12, 4.2); }
   // groene randen / plantvakken voorplein
   box('grass', 10.6, -2.9, 0, 14.8, -0.4, 0.06); box('grass', 21.2, -2.9, 0, 24.6, -0.4, 0.06);
 
@@ -979,7 +1038,7 @@ function buildSite() {
   for (let x = -260; x < 300; x += rr(7, 11)) trees.push([x, -56 + rr(-1, 1), 'round']);
   for (let y = -34; y < 260; y += rr(5, 7)) trees.push([126 + rr(-0.5, 0.5), y, 'poplar']);
   for (let y = 36; y < 260; y += rr(6, 9)) trees.push([-29, y, 'round']);
-  for (const [x, y] of [[-12, -30], [-5, -30], [3, -30], [-14, -26], [16, -32], [28, -37.5]]) trees.push([x, y, 'round']);
+  for (const [x, y] of [[-8, -26], [-1, -27], [6, -26], [-15, -18], [-15, -6], [24, -28], [9, -32], [28, -37.5]]) trees.push([x, y, 'round']);
   for (let i = 0; i < 40; i++) trees.push([rr(-60, 130), rr(-110, -66), 'round']);
   buildTrees(trees);
   // huizen langs de dijk
@@ -1030,7 +1089,7 @@ function buildTrees(list) {
   }
   const tg = new THREE.CylinderGeometry(0.6, 1, 1, 7); tg.translate(0, 0.5, 0);
   const tm = inst(tg, M.trunk, trunks.length, true);
-  const cg = new THREE.IcosahedronGeometry(1, 2); { const pos = cg.attributes.position; for (let i = 0; i < pos.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(pos, i); v.multiplyScalar(1 + Math.sin(v.x * 5.1 + v.y * 3) * Math.cos(v.z * 4.3) * 0.16); pos.setXYZ(i, v.x, v.y, v.z); } cg.computeVertexNormals(); }
+  const cg = new THREE.IcosahedronGeometry(1, 1); { const pos = cg.attributes.position; for (let i = 0; i < pos.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(pos, i); v.multiplyScalar(1 + Math.sin(v.x * 5.1 + v.y * 3) * Math.cos(v.z * 4.3) * 0.16); pos.setXYZ(i, v.x, v.y, v.z); } cg.computeVertexNormals(); }
   const cm = inst(cg, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), crowns.length, true);
   const pal = [0x6f7d3a, 0x86883c, 0xa8892f, 0xbf9a3a, 0x5f6f34, 0x7e6a2c, 0x9a7a2a, 0x6a7a33];
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
@@ -1068,6 +1127,7 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 let envRT = null;
 const sun = new THREE.DirectionalLight(0xffffff, 3); sun.castShadow = true;
 sun.shadow.mapSize.set(lowGPU ? 2048 : 4096, lowGPU ? 2048 : 4096); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
+sun.shadow.autoUpdate = false; let shadowDirty = true;
 scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xdfe8ff, 0x5a5440, 0.5); scene.add(hemi);
 scene.fog = new THREE.FogExp2(0xc9c0ae, 0.003);
@@ -1091,7 +1151,7 @@ function applyPreset(name) {
   M.ngRoof.emissiveIntensity = P.gh; M.ngSide.emissiveIntensity = P.gh * 0.25; M.streetlamp.emissiveIntensity = P.street;
   M.led.emissiveIntensity = P.interior;
   if (steam) { steam.material.uniforms.uFog.value.set(P.fog); steam.material.uniforms.uDen.value = P.fogD; steam.material.uniforms.uLight.value = P.steam; }
-  bloom.strength = name === 'dusk' ? 0.75 : 0.28; bloom.threshold = name === 'dusk' ? 0.6 : 0.92;
+  shadowDirty = true; bloom.enabled = name === 'dusk' || !lowGPU; bloom.strength = name === 'dusk' ? 0.75 : 0.22; bloom.threshold = name === 'dusk' ? 0.6 : 0.92;
   document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === name));
 }
 
@@ -1145,9 +1205,9 @@ function roomAt(x, y, lvl) {
 }
 const GOTO = [
   ['Voorplein', 17.9, -9, 0, 0], ['Entree', 17.9, 9.0, 0, 0], ['Ontvangstruimte', 21.0, 14.8, 0, 160], ['Hal', 17.2, 15.2, 0, 10],
-  ['Kantine', 15.2, 12.6, 0, 225], ['Teeltkantoor', 7.9, 17.0, 0, 300], ['Spreekkamer 1', 29.4, 19.0, 0, 300], ['Demoruimte', 31.0, 17.2, 0, 60],
+  ['Kantine', 15.2, 12.6, 0, 225], ['Teeltkantoor', 7.9, 17.0, 0, 300], ['Spreekkamer 1', 29.4, 19.0, 0, 300], ['Demoruimte (tomatenrassen)', 33.0, 19.6, 0, 90],
   ['Presentatieruimte (verd.)', 38.5, 22.6, FL1, 245], ['Ruimte 1.01 (verd.)', 20.2, 17.0, FL1, 40], ['Technische dienst', 6.0, 11.0, 0, 90], ['Goederenontvangst', 9.4, 4.8, 0, 300],
-  ['Kas — proefteelt zuid', 31, 12.5, 0, 150], ['Kas — noord', 14, 26.5, 0, 0],
+  ['Kas — tussen de tomaten', 41.0, 8.5, 0, 180], ['Kas — middenpad zuid', 31, 12.5, 0, 150], ['Kas — noord', 14, 26.5, 0, 0],
 ];
 
 /* ==========================================================================
@@ -1203,9 +1263,14 @@ function groundAt(x, y, feet) {
   for (const w of walkables) if (x >= w.x0 && x <= w.x1 && y >= w.y0 && y <= w.y1 && w.top <= feet + 0.45 && w.top > best) best = w.top;
   return best;
 }
+let colGrid = null; const CG = 4;
+function buildColGrid() { colGrid = new Map(); for (const c of colliders) { for (let i = Math.floor(c.x0 / CG); i <= Math.floor(c.x1 / CG); i++) for (let j = Math.floor(c.y0 / CG); j <= Math.floor(c.y1 / CG); j++) { const k = i * 100003 + j; let a = colGrid.get(k); if (!a) colGrid.set(k, a = []); a.push(c); } } }
 function blocked(x, y, feet, r = 0.28) {
   const za = feet + 0.4, zb = feet + 1.8;
-  for (const c of colliders) {
+  if (!colGrid) buildColGrid();
+  const cell = colGrid.get(Math.floor(x / CG) * 100003 + Math.floor(y / CG)) || [];
+  const near = (Math.floor((x - r) / CG) !== Math.floor((x + r) / CG) || Math.floor((y - r) / CG) !== Math.floor((y + r) / CG)) ? [...new Set([...(colGrid.get(Math.floor((x - r) / CG) * 100003 + Math.floor((y - r) / CG)) || []), ...(colGrid.get(Math.floor((x + r) / CG) * 100003 + Math.floor((y - r) / CG)) || []), ...(colGrid.get(Math.floor((x - r) / CG) * 100003 + Math.floor((y + r) / CG)) || []), ...(colGrid.get(Math.floor((x + r) / CG) * 100003 + Math.floor((y + r) / CG)) || [])])] : cell;
+  for (const c of near) {
     if (!c.active || c.z1 < za || c.z0 > zb) continue;
     if (x + r < c.x0 || x - r > c.x1 || y + r < c.y0 || y - r > c.y1) continue;
     const cx = Math.max(c.x0, Math.min(x, c.x1)), cy = Math.max(c.y0, Math.min(y, c.y1));
@@ -1251,10 +1316,10 @@ const SHOTS = [
     p: [W(20.2, 14.6, 1.9), W(21.0, 15.2, 2.6), W(22.6, 15.0, 3.6)], q: [W(25, 10, 2.8), W(26, 8.5, 3.6), W(23, 8, 4.4)] },
   { t: 'Hal 0.02', s: 'Open hal met keukeneiland; de trap voert naar de verdieping op +3200', d: 11,
     p: [W(22.6, 15.0, 3.0), W(21.0, 15.6, 1.9), W(18.8, 16.2, 1.72), W(18.8, 18.5, 2.9), W(18.8, 21.2, 4.6), W(18.9, 22.8, 4.9)], q: [W(17, 20, 2.0), W(18.8, 20, 2.2), W(18.8, 22, 3.0), W(18.8, 24, 4.4), W(19, 24, 4.9), W(22, 22.8, 4.9)] },
-  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping, met ramen die uitkijken over de kas', d: 11,
+  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes, ramen met uitzicht over de kas', d: 11,
     p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(33, 21.6, 5.1), W(37.5, 19.5, 5.2)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19, 4.8), W(32, 15, 4.6), W(33, 10, 4.2)] },
-  { t: 'De kas', s: 'Proefteelt van tomaat, paprika en komkommer direct naast de bedrijfsruimte', d: 11, cut: true,
-    p: [W(32.9, 18.0, 5.1), W(32.9, 14.0, 5.0), W(40, 4, 4.4), W(55, -8, 4.2), W(70, -18, 4.6)], q: [W(32.9, 10, 4.6), W(36, 4, 4.2), W(52, -6, 3.0), W(70, -16, 2.6), W(85, -25, 3.0)] },
+  { t: 'De kas', s: 'Tomatenplanten aan de hoge draad — per vak een ander ras: rood, geel, oranje, bruin en cherry', d: 11, cut: true,
+    p: [W(32.9, 18.0, 5.1), W(33.5, 13.5, 4.4), W(41.0, 11.0, 2.2), W(41.0, 3.0, 1.45), W(41.0, -8.0, 1.4)], q: [W(34, 10, 4.0), W(40, 6, 2.2), W(41.0, 2.0, 1.4), W(41.0, -8, 1.2), W(41.0, -20, 1.2)] },
   { t: 'Totaalbeeld', s: 'Bedrijfsruimte en kas als één geheel in het Westlandse kassengebied', d: 14, cut: true,
     p: [W(118, -60, 22), W(95, -105, 55), W(30, -135, 85), W(-40, -110, 95)], q: [W(70, -10, 3), W(45, 5, 2), W(30, 15, 0), W(30, 20, 0)] },
 ];
@@ -1277,7 +1342,7 @@ function updateTour(dt) {
   $('#fade').style.opacity = f.toFixed(3);
   if (i !== lastShot) {
     lastShot = i; const cap = $('#caption'); cap.classList.remove('on');
-    setTimeout(() => { $('#capK').textContent = String(i + 1).padStart(2, '0') + ' / ' + String(SHOTS.length).padStart(2, '0'); $('#capT').textContent = S.t; $('#capS').textContent = S.s; cap.classList.add('on'); }, 420);
+    setTimeout(() => { if (mode !== 'tour') return; $('#capK').textContent = String(i + 1).padStart(2, '0') + ' / ' + String(SHOTS.length).padStart(2, '0'); $('#capT').textContent = S.t; $('#capS').textContent = S.s; cap.classList.add('on'); }, 420);
   }
   $('#tourfill').style.width = (tourT / TOUR_LEN * 100) + '%';
 }
@@ -1382,16 +1447,36 @@ const focus = new THREE.Vector3(), lastShadowFocus = new THREE.Vector3(1e9, 0, 0
 let shadowExt = 0;
 function updateShadow() {
   const near = mode === 'walk' || (mode === 'tour' && camera.position.y < 9 && Math.abs(camera.position.x - 20) < 60);
-  const ext = near ? 45 : 95;
+  const ext = near ? 42 : 95;
   if (near) focus.set(camera.position.x, 0, camera.position.z); else focus.copy(W(30, 10, 0));
-  const texel = (ext * 2) / sun.shadow.mapSize.x * 4; focus.x = Math.round(focus.x / texel) * texel; focus.z = Math.round(focus.z / texel) * texel;
-  if (ext !== shadowExt) { const c = sun.shadow.camera; c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.near = 1; c.far = 600; c.updateProjectionMatrix(); shadowExt = ext; }
+  if (near) { focus.x = Math.round(focus.x / 8) * 8; focus.z = Math.round(focus.z / 8) * 8; }
+  if (ext !== shadowExt) { const c = sun.shadow.camera; c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.near = 1; c.far = 600; c.updateProjectionMatrix(); shadowExt = ext; shadowDirty = true; }
+  if (!focus.equals(lastShadowFocus)) { lastShadowFocus.copy(focus); shadowDirty = true; }
+  if (!shadowDirty) return;
   const d = sunDir.y < 0.05 ? sunDir.clone().setY(0.05).normalize() : sunDir;
   sun.target.position.copy(focus); sun.position.copy(focus).addScaledVector(d, 250); sun.target.updateMatrixWorld();
+  sun.shadow.needsUpdate = true; shadowDirty = false;
 }
-let roomKey = '';
+let roomKey = '', frameNo = 0;
+// adaptieve resolutie: houdt rondlopen vloeiend op tragere apparaten
+let prCur = PR, ftAvg = 16, adaptT = 0;
+function adaptRes(raw) {
+  if (raw > 0.25) return; ftAvg += (raw * 1000 - ftAvg) * 0.06; adaptT += raw; if (adaptT < 0.8) return; adaptT = 0;
+  let n = prCur; if (ftAvg > 22 && prCur > 0.6) n = Math.max(0.6, prCur - 0.15); else if (ftAvg < 13 && prCur < PR) n = Math.min(PR, prCur + 0.1);
+  if (n !== prCur) { prCur = n; renderer.setPixelRatio(n); composer.setPixelRatio(n); }
+}
+// gewassen: vruchttrossen alleen dichtbij tekenen, bladeren tot op afstand
+const _cp = new THREE.Vector3();
+function cullCrops() {
+  const x = camera.position.x, y = -camera.position.z, h = camera.position.y;
+  for (const c of cropChunks) {
+    const dx = Math.max(c.x0 - x, 0, x - c.x1), dy = Math.max(c.y0 - y, 0, y - c.y1), d = Math.hypot(dx, dy, Math.max(0, h - 4));
+    c.fruit.visible = d < (mode === 'orbit' ? 60 : 38); c.leaves.visible = d < (mode === 'walk' ? 110 : 220);
+  }
+}
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.05), t = clock.elapsedTime; frameNo++;
+  adaptRes(raw);
   if (mode === 'tour') updateTour(dt); else if (mode === 'walk') updateWalk(dt); else if (mode === 'orbit') orbit.update();
   // doors
   const cx = camera.position.x, cy = -camera.position.z;
@@ -1410,10 +1495,12 @@ function frame() {
   if (steam) steam.material.uniforms.uTime.value = t;
   finish.uniforms.uTime.value = t % 10;
   updateShadow();
+  cullCrops();
+  bloom.enabled = preset === 'dusk' || mode !== 'walk';
   if (mode === 'walk') {
     const lvl = player.feet > 2.5 ? 1 : 0, R = roomAt(player.x, player.y, lvl), key = R.n + lvl;
     if (key !== roomKey) { roomKey = key; $('#rcName').textContent = R.n; $('#rcMeta').textContent = (R.c ? R.c : '') + (R.a ? ' · ' + R.a + ' m²' : '') + (lvl ? ' · verdieping' : ''); $('#mapLvl').textContent = lvl ? 'Verdieping +3200' : 'Begane grond'; }
-    drawMinimap(player.x, player.y, player.yaw, lvl);
+    if (frameNo % 3 === 0) drawMinimap(player.x, player.y, player.yaw, lvl);
   }
   if (labelEls.length) updateLabels();
   composer.render(dt);
@@ -1427,7 +1514,9 @@ addEventListener('resize', () => {
 
 /* ---------- boot ---------- */
 async function boot() {
-  try { await Promise.race([document.fonts.load('800 40px Archivo'), new Promise(r => setTimeout(r, 1500))]); } catch (e) { }
+  try { await Promise.race([Promise.all([document.fonts.load('800 40px Archivo'), document.fonts.load('800 40px Nunito'), document.fonts.load('600 40px Nunito')]), new Promise(r => setTimeout(r, 2000))]); } catch (e) { }
+  try { logoImg = await Promise.race([new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'axia-logo.png'; }), new Promise(r => setTimeout(() => r(null), 1500))]); } catch (e) { logoImg = null; }
+  paintLogoCanvas('ldLogo'); paintLogoCanvas('brandLogo');
   setLoad(0.08, 'Materialen genereren…'); await tick();
   buildTextures(); buildMaterials();
   setLoad(0.3, 'Bedrijfsruimte opbouwen…'); await tick();

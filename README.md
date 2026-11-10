@@ -8,6 +8,8 @@ Open `index.html` in een recente browser (internet nodig voor three.js en letter
 - **Drone-tour** – cinematografische vlucht van buiten naar binnen, via entree, ontvangstruimte, hal en trap naar de presentatieruimte en de kas.
 - **Rondlopen** – zelf lopen met WASD/pijltjes + muis (mobiel: joystick + vegen), met minikaart, ruimtenaam en "Ga naar".
 - **Maquette** – vrij draaien, met doorsneden per bouwlaag en ruimtelabels.
+- **Tomaten** – tomatenplanten aan de hoge draad met per vak een ander ras (rood, geel, oranje, bruin, cherry, roze, groen, paars); rassen gepresenteerd in kistjes in de demo- en presentatieruimte.
+- **Logo** – zet het originele logo als `axia-logo.png` naast `index.html`; anders wordt een nagetekende versie gebruikt.
 - **Licht** – ochtend (zoals de dronefoto), middag en avond met kasbelichting.
 
 Maatvoering volgt de stramienen (5 m / 8 m) en de verdiepingsvloer op +3200. Gevelopeningen, dakvorm, kas, inrichting en omgeving zijn een interpretatie voor de impressie.
