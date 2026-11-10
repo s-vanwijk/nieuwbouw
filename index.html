@@ -56,14 +56,23 @@ body.tour .lb{transform:none}
 body.tour #brand{top:calc(9vh + 14px)}
 
 /* tour caption */
-#caption{position:fixed;z-index:10;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(9vh + 26px);max-width:min(620px,calc(100vw - 48px));display:grid;gap:6px;opacity:0;transform:translateY(8px);transition:opacity .8s, transform .8s;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.55)}
+#caption{position:fixed;z-index:10;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(9vh + 26px);max-width:min(620px,calc(100vw - 420px));display:grid;gap:6px;opacity:0;transform:translateY(8px);transition:opacity .8s, transform .8s;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.55)}
 #caption.on{opacity:1;transform:none}
 #capK{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;color:var(--amp)}
 #capT{font-weight:700;font-stretch:115%;font-size:clamp(26px,4.4vw,48px);line-height:1.02;letter-spacing:-.01em;text-wrap:balance}
 #capS{font-size:clamp(14px,1.6vw,17px);color:var(--ink);opacity:.86;line-height:1.45}
-#tourbar{position:fixed;z-index:10;left:0;right:0;bottom:9vh;height:2px;background:transparent;pointer-events:none}
-#tourbar i{display:block;height:100%;width:0;background:var(--amp);opacity:.9}
-#skip{position:fixed;z-index:11;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(9vh + 22px)}
+#tourbar{position:fixed;z-index:10;left:0;right:0;bottom:9vh;height:14px;margin-bottom:-6px;background:transparent;cursor:pointer;display:flex;align-items:center}
+#tourbar::before{content:'';position:absolute;left:0;right:0;top:6px;height:2px;background:rgba(255,255,255,.12)}
+#tourbar i{position:relative}
+body:not(.tour) #tourbar{display:none}
+#tourbar i{display:block;height:2px;width:0;background:var(--amp);opacity:.95}
+#player{position:fixed;z-index:11;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(9vh + 18px);display:flex;align-items:center;gap:4px;padding:5px}
+#tourTime{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2);padding:0 8px;font-variant-numeric:tabular-nums}
+#sndBtn.nudge{background:var(--amp);color:#1a1206}
+#endcard{position:fixed;inset:0;z-index:7;display:grid;place-content:center;justify-items:center;gap:14px;pointer-events:none;background:radial-gradient(60% 55% at 50% 50%,rgba(8,12,11,.72),rgba(8,12,11,.25) 70%,transparent)}
+#endLogo{height:clamp(70px,11vw,150px);width:auto;background:#fff;border-radius:14px;padding:14px 22px;box-sizing:content-box;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.ec-t{font-weight:700;font-stretch:118%;font-size:clamp(26px,4vw,52px);letter-spacing:-.01em;text-shadow:0 2px 20px rgba(0,0,0,.5)}
+.ec-s{font-family:var(--f-mono);font-size:clamp(11px,1.2vw,14px);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
 
 /* panels & buttons */
 .pnl{background:var(--glass);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);border:1px solid var(--line);border-radius:10px}
@@ -208,8 +217,18 @@ body.editing #stage canvas{cursor:pointer}
 </header>
 
 <div id="caption"><div id="capK"></div><div id="capT"></div><div id="capS"></div></div>
-<div id="tourbar"><i id="tourfill"></i></div>
-<button id="skip" class="btn ghost" hidden>Tour overslaan</button>
+<div id="tourbar" role="slider" aria-label="Tijdlijn film" tabindex="0"><i id="tourfill"></i></div>
+<div id="player" class="pnl" hidden>
+  <button class="btn" id="playBtn" aria-label="Pauzeren"><svg viewBox="0 0 24 24" fill="currentColor" id="playIco"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></button>
+  <span id="tourTime">00:00 / 01:16</span>
+  <button class="btn nudge" id="sndBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11"/></svg><span id="sndLbl">Geluid uit</span></button>
+  <button class="btn ghost" id="skip">Overslaan</button>
+</div>
+<div id="endcard" hidden>
+  <canvas id="endLogo" width="984" height="320" role="img" aria-label="Axia Vegetable Seeds"></canvas>
+  <div class="ec-t">Nieuwbouw bedrijfsruimte</div>
+  <div class="ec-s">Hoge Noordweg 6a · Naaldwijk</div>
+</div>
 
 <div id="roomchip" class="pnl" hidden><b id="rcName"></b><span id="rcMeta"></span></div>
 <div id="reticle" hidden></div>
@@ -405,6 +424,17 @@ function buildTextures() {
         g.strokeStyle = `hsla(${hh},${sat}%,${li + 14}%,.55)`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-L * 0.9, 0); g.lineTo(L * 0.9, 0); g.stroke(); g.restore(); } }
     return c; };
   T.leafRow = tex(drawLeaves(91, 88, 112, null, 1500), 1 / 0.9);
+  // losse bladvormen: gekarteld tomatenblaadje en groot kamerplantblad (met nerven, alfa rondom)
+  const leaflet = (kind) => { const c = document.createElement('canvas'); c.width = 256; c.height = 512; const g = c.getContext('2d'); const cx = 128, top = 10, bot = 500, wm = kind === 'big' ? 118 : 100, N = 64, R2 = [], L2 = [];
+    for (let i = 0; i <= N; i++) { const t = i / N, y = top + (bot - top) * t; let w = wm * Math.pow(Math.sin(Math.PI * Math.pow(t, kind === 'big' ? 0.62 : 0.78)), 0.85); if (kind !== 'big') w *= (i % 2 ? 0.86 : 1.05) * (1 + 0.04 * Math.sin(t * 9)); R2.push([cx + w, y]); L2.push([cx - w * (kind === 'big' ? 1 : 0.95), y]); }
+    g.beginPath(); g.moveTo(cx, top); for (const [x, y] of R2) g.lineTo(x, y); for (const [x, y] of L2.reverse()) g.lineTo(x, y); g.closePath();
+    const gr = g.createLinearGradient(0, top, 0, bot); if (kind === 'big') { gr.addColorStop(0, '#3f7a35'); gr.addColorStop(1, '#1d4a1f'); } else { gr.addColorStop(0, '#5f9440'); gr.addColorStop(0.6, '#447a2f'); gr.addColorStop(1, '#3a6a28'); }
+    g.fillStyle = gr; g.fill(); g.save(); g.clip();
+    const gl = g.createLinearGradient(0, 0, 256, 0); gl.addColorStop(0, 'rgba(0,0,0,.18)'); gl.addColorStop(0.5, 'rgba(255,255,255,.06)'); gl.addColorStop(1, 'rgba(0,0,0,.2)'); g.fillStyle = gl; g.fillRect(0, 0, 256, 512);
+    g.strokeStyle = kind === 'big' ? 'rgba(180,220,150,.55)' : 'rgba(190,230,150,.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx, top + 6); g.lineTo(cx, bot); g.stroke();
+    g.lineWidth = 1.6; for (let k = 1; k < 9; k++) { const y = bot - (bot - top) * k / 9.5; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(cx, y); g.quadraticCurveTo(cx + sx * 40, y - 22, cx + sx * 95, y - 62); g.stroke(); } }
+    g.restore(); return c; };
+  T.leaflet = tex(leaflet('tomato'), 1); T.bigLeaf = tex(leaflet('big'), 1);
   T.leafSolid = tex(drawLeaves(92, 88, 112, '#1f3a1a', 900), 1);
   T.leafTree = tex(drawLeaves(93, 32, 95, null, 1100), 1);
   { const pm = pix(512, (x, y, i) => { const v = 238 + (n[i % n.length] - .5) * 10; return [v, v, v + 2]; }); const g = pm.g; g.strokeStyle = 'rgba(120,120,125,.35)'; for (let k = 0; k < 14; k++) { g.lineWidth = rr(0.6, 2.2); g.beginPath(); let x = rr(0, 512), y = 0; g.moveTo(x, y); while (y < 512) { x += rr(-25, 25); y += rr(15, 40); g.lineTo(x, y); } g.stroke(); } T.marble = tex(pm.c, 1 / 1.2); }
@@ -755,8 +785,8 @@ function sectDoor(hor, c, a, b, z0, z1, t) {
 function updateSectDoors(dt) {
   const cx = camera.position.x, cy = -camera.position.z;
   for (const d of sectDoors) {
-    const near = mode !== 'orbit' && Math.hypot(cx - d.cx, cy - d.cy) < 6.5 && camera.position.y < 5;
-    d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * 1.2);
+    const near = mode !== 'orbit' && Math.hypot(cx - d.cx, cy - d.cy) < (mode === 'tour' ? 10 : 6.5) && camera.position.y < 5;
+    d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * (mode === 'tour' ? 1.8 : 1.2));
     d.m.scale.y = Math.max(0.03, 1 - d.open); d.col.active = d.open < 0.6;
   }
 }
@@ -1124,18 +1154,34 @@ function sphereGeo(r, cx, cy, cz, sx = 1, sy = 1, sz = 1, detail = 0) {
 }
 const cropChunks = [];
 function buildCrops() {
-  const dens = lowGPU ? 0.8 : 0.7;
-  // één plant = steel + drie bladpakketten (onderste blad is weggeplukt, zoals bij tomaat gebruikelijk)
-  const stem = new THREE.CylinderGeometry(0.012, 0.014, 2.9, 4, 1, true).toNonIndexed(); stem.translate(0, 0.6 + 1.45, 0); stem.deleteAttribute('uv');
-  const plantGeo = mergeGeometries([stem, sphereGeo(0.34, 0.05, 1.55, 0.05, 0.72, 0.85, 1.6), sphereGeo(0.34, -0.05, 1.98, -0.06, 0.72, 0.9, 1.55), sphereGeo(0.33, 0.04, 2.4, 0.04, 0.7, 0.9, 1.6), sphereGeo(0.3, -0.06, 2.8, -0.05, 0.8, 0.85, 1.55), sphereGeo(0.25, 0.03, 3.18, 0.02, 0.75, 0.9, 1.4)].map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
+  const dens = lowGPU ? 0.85 : 0.75, LP = lowGPU ? 5 : 7;
+  // ---- tomatenplant zoals hij echt groeit: stengel langs het touw, samengestelde bladeren, onderin kaal geplukt
+  const setCol = (g, rgb) => { const n = g.attributes.position.count, a2 = new Float32Array(n * 3); for (let i = 0; i < n; i++) a2.set(rgb, i * 3); g.setAttribute('color', new THREE.BufferAttribute(a2, 3)); return g; };
+  const upN = g => { const n = g.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); return g; };
+  const leafPlane = (w, l, yaw, roll, x, y, z) => { const p = new THREE.PlaneGeometry(w, l); p.translate(0, l / 2, 0); p.rotateX(-Math.PI / 2); p.rotateZ(roll); p.rotateY(yaw); p.translate(x, y, z); return upN(p); };
+  const compoundLeaf = len => { const parts = [];
+    const rach = new THREE.CylinderGeometry(0.005, 0.008, len, 4, 1, true).toNonIndexed(); rach.rotateZ(-Math.PI / 2); rach.translate(len / 2, 0, 0); { const uv = rach.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.36, 0.5); } parts.push(rach);
+    for (const [s2, sz] of [[0.25, 0.8], [0.48, 1.0], [0.7, 1.05]]) for (const side of [1, -1]) parts.push(leafPlane(0.085 * sz * len / 0.45, 0.15 * sz * len / 0.45, side > 0 ? -0.5 : -2.64, rr(-0.25, 0.25), s2 * len, -s2 * s2 * 0.06, 0));
+    for (const [s2, side] of [[0.37, 1], [0.6, -1]]) parts.push(leafPlane(0.04 * len / 0.45, 0.06 * len / 0.45, side > 0 ? -0.4 : -2.74, 0, s2 * len, -0.01, 0)); // tussenblaadjes
+    parts.push(leafPlane(0.09 * len / 0.45, 0.17 * len / 0.45, -Math.PI / 2, 0, len * 0.9, -0.05, 0));                                // eindblaadje
+    return mergeGeometries(parts.map(g => { const q2 = g.index ? g.toNonIndexed() : g; return q2; })); };
+  const LEAF = [compoundLeaf(0.42), compoundLeaf(0.5)];
+  const tomLeafMat = new THREE.MeshStandardMaterial({ map: T.leaflet, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.68, envMapIntensity: 0.5 }); tomLeafMat.clippingPlanes = CLIP;
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x5b7a33, roughness: 0.7 }); stemMat.clippingPlanes = CLIP;
+  const stemGeo = new THREE.CylinderGeometry(0.011, 0.014, 2.95, 5, 1, true); stemGeo.translate(0, 0.55 + 1.475, 0);
+  const plantGeo = stemGeo;
   const truss = (cherry, r) => {
     const parts = [], n = cherry ? 10 : 6;
-    for (const [side, z0] of [[1, 1.35], [-1, 0.95], [1, 0.62]]) for (let k = 0; k < n; k++) { const t = k / (n - 1); parts.push(sphereGeo(r, side * (0.12 + t * 0.12) + (k % 2 ? 0.03 : -0.03) * (cherry ? 1 : 0.6), z0 - t * (cherry ? 0.22 : 0.3), (k % 2 ? 0.035 : -0.035))); }
-    return mergeGeometries(parts.map(g => { g.deleteAttribute('uv'); return g; }));
+    for (const [side, z0] of [[1, 1.35], [-1, 0.95], [1, 0.62]]) {
+      for (let k = 0; k < n; k++) { const t = k / (n - 1); parts.push(setCol(sphereGeo(r, side * (0.12 + t * 0.12) + (k % 2 ? 0.03 : -0.03) * (cherry ? 1 : 0.6), z0 - t * (cherry ? 0.22 : 0.3), (k % 2 ? 0.035 : -0.035)), [1, 1, 1])); }
+      const st = new THREE.CylinderGeometry(0.005, 0.006, 0.2, 4, 1, true).toNonIndexed(); st.rotateZ(side * 1.0); st.translate(side * 0.07, z0 + 0.07, 0); parts.push(setCol(st, [0.28, 0.45, 0.16]));
+    }
+    return mergeGeometries(parts.map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
   };
   const tCache = {}; const trussFor = V => tCache[V.n] || (tCache[V.n] = truss(!!V.cherry, V.r));
   const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, map: T.leafSolid }); leafMat.clippingPlanes = CLIP;
   const fruitMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.0 }); fruitMat.clippingPlanes = CLIP;
+  const trussMat = fruitMat.clone(); trussMat.vertexColors = true; trussMat.clippingPlanes = CLIP;
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
   const pipes = []; let vi = 0;
   const zone = (x0, x1, y0, y1) => {
@@ -1148,34 +1194,41 @@ function buildCrops() {
         colliders.push({ x0: x - 0.32, x1: x + 0.32, y0, y1, z0: 0, z1: 3, active: true });
         box('white', x - 0.13, y0, 0.42, x + 0.13, y1, 0.56);                 // teeltgoot
         box('white', x - 0.01, y0, 3.55, x + 0.01, y1, 3.57);                 // draaddraad
-        for (const dx of [-0.13, 0.13]) poly('cropLeaf', [W(x + dx, y0 + 0.2, 1.25), W(x + dx, y1 - 0.2, 1.25), W(x + dx * 0.6, y1 - 0.2, 3.4), W(x + dx * 0.6, y0 + 0.2, 3.4)]); // bladwand
+        for (const dx of [-0.05, 0.05]) poly('cropLeaf', [W(x + dx, y0 + 0.2, 1.8), W(x + dx, y1 - 0.2, 1.8), W(x + dx, y1 - 0.2, 3.3), W(x + dx, y0 + 0.2, 3.3)]); // dichte kern van de rij
         for (let y = y0 + 0.3; y < y1 - 0.2; y += dens) spots.push([x + rr(-0.04, 0.04), y + rr(-0.05, 0.05)]);
       }
       if (!spots.length) continue;
-      const lm = inst(plantGeo, leafMat, spots.length, false), tm = inst(trussFor(V), fruitMat, spots.length, false);
+      const lm = inst(plantGeo, stemMat, spots.length, false), tm = inst(trussFor(V), trussMat, spots.length, false);
+      const lv = inst(LEAF[vi % 2], tomLeafMat, spots.length * LP, false); const e3 = new THREE.Euler(0, 0, 0, 'YZX');
       spots.forEach(([x, y], i) => {
         q.setFromAxisAngle(_up, (rnd() < 0.5 ? 0 : Math.PI) + rr(-0.35, 0.35)); const s2 = rr(0.9, 1.1);
-        mtx.compose(pv.set(x, 0, -y), q, sc.set(s2 * 0.7, rr(0.92, 1.08), s2 * 0.75)); lm.setMatrixAt(i, mtx);
-        c.setRGB(rr(0.85, 1.15), rr(0.9, 1.15), rr(0.85, 1.1)); lm.setColorAt(i, c);
+        mtx.compose(pv.set(x, 0, -y), q, sc.set(1, rr(0.95, 1.05), 1)); lm.setMatrixAt(i, mtx);
+        for (let k = 0; k < LP; k++) { const h = 1.42 + k * (1.95 / (LP - 1)) + rr(-0.06, 0.06), kk = k / (LP - 1);
+          e3.set(0, k * 2.399 + rnd() * 0.6, -(0.12 + rnd() * 0.3) - (1 - kk) * 0.25); q.setFromEuler(e3); const ls = (1.05 + (1 - kk) * 0.35) * rr(0.85, 1.12);
+          mtx.compose(pv.set(x + rr(-0.02, 0.02), h, -y), q, sc.set(ls, ls, ls)); lv.setMatrixAt(i * LP + k, mtx); c.setRGB(rr(0.82, 1.08), rr(0.88, 1.1), rr(0.8, 1.05)); lv.setColorAt(i * LP + k, c); }
+        q.setFromAxisAngle(_up, (rnd() < 0.5 ? 0 : Math.PI) + rr(-0.35, 0.35));
         mtx.compose(pv.set(x, 0, -y), q, sc.set(1, rr(0.95, 1.05), 1)); tm.setMatrixAt(i, mtx);
         c.set(V.c); c.offsetHSL(rr(-0.01, 0.01), 0, rr(-0.04, 0.04)); tm.setColorAt(i, c);
       });
-      lm.computeBoundingSphere(); tm.computeBoundingSphere();
-      cropChunks.push({ x0: bx, x1: bx + 9.6, y0, y1, leaves: lm, fruit: tm, variety: V.n });
+      lm.computeBoundingSphere(); tm.computeBoundingSphere(); lv.computeBoundingSphere();
+      cropChunks.push({ x0: bx, x1: bx + 9.6, y0, y1, leaves: lv, stems: lm, fruit: tm, variety: V.n });
     }
   };
   zone(0, 55, 29.5, 73.5);
   zone(0, 55, 77.5, 119.5);
   const pm = inst(new THREE.CylinderGeometry(0.026, 0.026, 1, 6), M.alu, pipes.length * 2, false);
   pipes.forEach(([x, y0, y1], i) => { for (const s2 of [-1, 1]) { mtx.compose(new THREE.Vector3(x + s2 * 0.28, 0.16, -(y0 + y1) / 2), new THREE.Quaternion().setFromAxisAngle(_upX, Math.PI / 2), new THREE.Vector3(1, y1 - y0, 1)); pm.setMatrixAt(i * 2 + (s2 > 0 ? 1 : 0), mtx); } });
-  // potplanten & jonge tomatenplanten in trays
-  const geo = sphereGeo(1, 0, 0, 0, 1, 1, 1, 1);
-  const sm = inst(geo, leafMat, plantSpots.length, false);
-  plantSpots.forEach(([x, y, z, s2, kind], i) => {
-    if (kind === 'tray') { mtx.compose(new THREE.Vector3(x, z + 0.1, -y), q.setFromAxisAngle(_up, rnd() * 6), new THREE.Vector3(0.15, 0.14, 0.15)); c.setRGB(0.25 * rr(.8, 1.2), 0.48 * rr(.85, 1.1), 0.2).convertSRGBToLinear(); }
-    else { mtx.compose(new THREE.Vector3(x, z + 0.55 * s2, -y), q.setFromAxisAngle(_up, rnd() * 6), new THREE.Vector3(0.45 * s2, 0.65 * s2, 0.45 * s2)); c.setRGB(0.22, 0.42, 0.18).convertSRGBToLinear(); }
-    sm.setMatrixAt(i, mtx); sm.setColorAt(i, c);
-  });
+  // kamerplanten (grote bladeren in een spiraal) en jonge tomatenplantjes (rozet van blaadjes)
+  const big = []; for (let k = 0; k < 13; k++) { const yaw = k * 2.399, up = 0.35 + (k / 13) * 0.9, l = 0.42 - k * 0.012; const st = new THREE.CylinderGeometry(0.008, 0.01, up, 4, 1, true).toNonIndexed(); st.translate(Math.cos(yaw) * 0.03, up / 2, -Math.sin(yaw) * 0.03); { const uv = st.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.32, 0.5); } big.push(upN(st));
+    const pl = new THREE.PlaneGeometry(0.2, l); pl.translate(0, l / 2, 0); pl.rotateX(-Math.PI / 2 + 0.55 + (k / 13) * 0.5); pl.rotateY(yaw - Math.PI / 2); pl.translate(Math.cos(yaw) * 0.04, up, -Math.sin(yaw) * 0.04); big.push(upN(pl)); }
+  const bigGeo = mergeGeometries(big.map(g => g.index ? g.toNonIndexed() : g));
+  const seed = []; for (let k = 0; k < 5; k++) { const yaw = k * 1.257; seed.push(leafPlane(0.045, 0.085, yaw, 0.0, 0, 0.04 + k * 0.01, 0)); }
+  const seedGeo = mergeGeometries(seed.map(g => g.index ? g.toNonIndexed() : g));
+  const bigMat = new THREE.MeshStandardMaterial({ map: T.bigLeaf, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7, envMapIntensity: 0.35 }); bigMat.clippingPlanes = CLIP;
+  const trays = plantSpots.filter(p => p[4] === 'tray'), pots = plantSpots.filter(p => p[4] !== 'tray');
+  const pm2 = inst(bigGeo, bigMat, pots.length, true), sm2 = inst(seedGeo, tomLeafMat, trays.length, false);
+  pots.forEach(([x, y, z, s2], i) => { q.setFromAxisAngle(_up, rnd() * 6.28); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(s2 * 1.6, s2 * 1.6, s2 * 1.6)); pm2.setMatrixAt(i, mtx); c.setRGB(rr(0.85, 1.1), rr(0.9, 1.1), rr(0.85, 1.05)); pm2.setColorAt(i, c); });
+  trays.forEach(([x, y, z], i) => { q.setFromAxisAngle(_up, rnd() * 6.28); const k = rr(1.6, 2.4); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(k, k, k)); sm2.setMatrixAt(i, mtx); c.setRGB(rr(0.9, 1.15), rr(0.95, 1.15), rr(0.85, 1.05)); sm2.setColorAt(i, c); });
   // gepresenteerde tomaten (kistjes, schalen)
   const dm = inst(sphereGeo(1, 0, 0, 0, 1, 0.86, 1, 1), fruitMat, displayFruit.length, true);
   displayFruit.forEach(([x, y, z, r, col], i) => { q.setFromAxisAngle(_up, rnd() * 6); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r, r, r)); dm.setMatrixAt(i, mtx); c.set(col); c.offsetHSL(rr(-0.012, 0.012), 0, rr(-0.05, 0.05)); dm.setColorAt(i, c); });
@@ -1248,10 +1301,10 @@ function buildSite() {
     const a2 = edge[i], b2 = edge[i + 1];
     beam('stone', W(a2.x, a2.y, 0.06), W(b2.x, b2.y, 0.06), 0.2, 0.12);
     const fa = off(a2, b2, 0.6), fb = off(a2, b2, 0.6); const fb2 = off(b2, edge[Math.min(i + 2, edge.length - 1)] || b2, 0.6);
-    if (!(a2.x > 19.5 && a2.x < 27.5)) fenceSeg(fa, i < edge.length - 2 ? fb2 : off(a2, b2, 0.6).add(new THREE.Vector2(b2.x - a2.x, b2.y - a2.y)));
-    const h1 = off(a2, b2, 1.4); if (!(a2.x > 19.5 && a2.x < 27.5)) beam('leaf', W(h1.x, h1.y, 0.45), W(h1.x + (b2.x - a2.x), h1.y + (b2.y - a2.y), 0.45), 0.9, 0.9);
+    if (!(a2.x > 15.5 && a2.x < 27.5)) fenceSeg(fa, i < edge.length - 2 ? fb2 : off(a2, b2, 0.6).add(new THREE.Vector2(b2.x - a2.x, b2.y - a2.y)));
+    const h1 = off(a2, b2, 1.4); if (!(a2.x > 15.5 && a2.x < 27.5)) beam('leaf', W(h1.x, h1.y, 0.45), W(h1.x + (b2.x - a2.x), h1.y + (b2.y - a2.y), 0.45), 0.9, 0.9);
   }
-  for (let x = -1.2; x < 16; x += 2) { if (x > 15) break; fenceSeg(new THREE.Vector2(x, -10.1), new THREE.Vector2(Math.min(16, x + 2), -10.1)); beam('stone', W(x, -9.5, 0.06), W(Math.min(16, x + 2), -9.5, 0.06), 0.2, 0.12); }
+  for (let x = -1.2; x < 14; x += 2) { fenceSeg(new THREE.Vector2(x, -10.1), new THREE.Vector2(Math.min(14.8, x + 2), -10.1)); beam('stone', W(x, -9.5, 0.06), W(Math.min(16, x + 2), -9.5, 0.06), 0.2, 0.12); }
   // parkeervakken
   const bays = [];
   for (let x = 25.6; x < 38; x += 2.6) bays.push([x, 10.4, x + 2.5, 15.9, 'n']);           // voor de gevel van beuk 3
@@ -1282,15 +1335,15 @@ function buildSite() {
     f.position.set(x + 0.05, 7.6, -y); f.rotation.y = 0.35 + i * 0.1; f.castShadow = true; scene.add(f); flags.push({ mesh: f, base: g.attributes.position.array.slice(), ph: i * 1.3 });
   }
   // naamzuil bij de inrit
-  box('trim', 18.6, -11.2, 0, 19.1, -9.2, 2.6, { col: true });
-  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(19.11, -10.2, 1.35), Math.PI / 2);
+  box('grass', 14.8, -13.6, 0, 20.3, -9.5, 0.05); box('trim', 16.6, -11.9, 0, 18.8, -11.4, 2.7, { col: true }); box('stone', 16.4, -12.1, 0, 19.0, -11.2, 0.12);
+  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(17.7, -11.93, 1.45), 0);
 
   // ---- water: sloot langs het terrein (in de bocht mee), langs de kas, langs de snelweg, en het bassin
   water = true;
-  const ditchA = new THREE.CatmullRomCurve3([v2(-400, -11.6), v2(-1.5, -11.6), v2(19.8, -11.6)], false), ditchB = new THREE.CatmullRomCurve3([v2(27.8, -11.4), v2(36, -9.0), v2(43, -3.5), v2(49, 4), v2(54.5, 12), v2(58.2, 20), v2(58.6, 28), v2(58.6, 150)], false, 'centripetal');
+  const ditchA = new THREE.CatmullRomCurve3([v2(-400, -11.6), v2(-1.5, -11.6), v2(14.6, -11.6)], false), ditchB = new THREE.CatmullRomCurve3([v2(27.8, -11.4), v2(36, -9.0), v2(43, -3.5), v2(49, 4), v2(54.5, 12), v2(58.2, 20), v2(58.6, 28), v2(58.6, 150)], false, 'centripetal');
   for (const dc of [ditchA, ditchB]) { ribbon('grass', dc, 4.4, 0.006, 300); ribbon('water', dc, 2.6, 0.014, 300);
     for (const p of dc.getSpacedPoints(Math.ceil(dc.getLength() / 2))) colliders.push({ x0: p.x - 1.0, x1: p.x + 1.0, y0: p.z - 1.0, y1: p.z + 1.0, z0: -1, z1: 5, active: true }); }
-  box('trim', 19.6, -13.9, -0.05, 28.0, -10.8, 0.0); // duiker
+  box('trim', 14.4, -13.9, -0.05, 28.0, -10.8, 0.0); // duiker
   for (const [x0, y0, x1, y1] of [[-400, -35.5, 400, -32.5], [100, -21, 103, 320], [-1, 121, 60, 124]]) { box('water', x0, y0, 0.0, x1, y1, 0.012); box('grass', x0 - 0.7, y0 - 0.7, -0.02, x1 + 0.7, y1 + 0.7, 0.006); colliders.push({ x0, y0, x1, y1, z0: -1, z1: 5, active: true }); }
   box('trim', 63, 48, 0, 90, 50, 1.6, { col: true }); box('trim', 63, 98, 0, 90, 100, 1.6, { col: true }); box('trim', 63, 48, 0, 65, 100, 1.6, { col: true }); box('trim', 88, 48, 0, 90, 100, 1.6, { col: true });
   box('water', 65, 50, 0, 88, 98, 1.3); box('black', 65, 50, 0, 88, 98, 1.25);
@@ -1363,27 +1416,40 @@ function buildSite() {
 const traffic = [];
 let trafficMesh = null;
 function buildTraffic() {
-  const lanes = [[-71, -1, 30], [-67.7, -1, 26], [-74.3, -1, 23], [-51.8, 1, 30], [-55.1, 1, 26], [-48.5, 1, 23]];
+  const lanes = [[-71, 1, 30], [-67.7, 1, 26], [-74.3, 1, 23], [-51.8, -1, 30], [-55.1, -1, 26], [-48.5, -1, 23]]; // rechts rijden
   for (let k = 0; k < 3; k++) traffic.push({ local: true, u: rnd(), dir: k % 2 ? 1 : -1, sp: 12, truck: k === 2 });
   traffic.push({ side: true, x: -3.5, y: 120, dir: 1, sp: 8, truck: false });
   for (const [y, dir, sp] of lanes) for (let k = 0; k < (y > -30 ? 2 : 4); k++) { const truck = y < -30 && rnd() < 0.3; traffic.push({ y, dir, sp: sp * rr(0.85, 1.1), x: rr(-500, 500), truck }); }
-  trafficMesh = inst(new RoundedBoxGeometry(1, 1, 1, 2, 0.12), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.5 }), traffic.length, true);
-  const c = new THREE.Color(); traffic.forEach((v, i) => { c.set(v.truck ? pick([0xf2f2f2, 0xc21f1f, 0x2b4f8a]) : pick([0xf4f4f4, 0x15171a, 0x8b9399, 0x24324f, 0xc9ced2])); trafficMesh.setColorAt(i, c); });
-  for (const v of traffic) if (v.side) colliders.push(v.col = { x0: 0, x1: 0, y0: 0, y1: 0, z0: 0, z1: 0, active: false });
-  trafficMesh.frustumCulled = false;
+  const n = traffic.length, paint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.6 });
+  trafficMesh = { body: inst(new RoundedBoxGeometry(1, 1, 1, 3, 0.18), paint, n, true), cab: inst(new RoundedBoxGeometry(1, 1, 1, 3, 0.22), new THREE.MeshStandardMaterial({ color: 0x0c1012, roughness: 0.05, metalness: 0.85 }), n, true),
+    wheel: inst(new THREE.CylinderGeometry(1, 1, 1, 18), new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 }), n * 6, false), rim: inst(new THREE.CylinderGeometry(1, 1, 1, 12), new THREE.MeshStandardMaterial({ color: 0xb9bec2, roughness: 0.3, metalness: 0.9 }), n * 6, false),
+    lamp: inst(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d6, emissiveIntensity: 1.2 }), n * 2, false) };
+  for (const m of Object.values(trafficMesh)) m.frustumCulled = false;
+  const c = new THREE.Color(); traffic.forEach((v, i) => { c.set(v.truck ? pick([0xf2f2f2, 0xc21f1f, 0x2b4f8a]) : pick([0xf4f4f4, 0x15171a, 0x8b9399, 0x24324f, 0xc9ced2])); trafficMesh.body.setColorAt(i, c); v.spin = 0; });
 }
-const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _ts = new THREE.Vector3(), _tp = new THREE.Vector3();
+const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _ts = new THREE.Vector3(), _tp = new THREE.Vector3(), _cm = new THREE.Matrix4(), _lm = new THREE.Matrix4(), _wq = new THREE.Quaternion(), _e = new THREE.Euler();
+// onderdeel van een voertuig: lokale positie/schaal in het voertuig, daarna met de voertuigmatrix vermenigvuldigd
+function vPart(mesh, idx, base, lx, ly, lz, sx, sy, sz, q = null) { _lm.compose(_tp.set(lx, ly, lz), q || _tq.identity(), _ts.set(sx, sy, sz)); _cm.multiplyMatrices(base, _lm); mesh.setMatrixAt(idx, _cm); }
+const _base = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _bp = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1);
 function updateTraffic(dt) {
   if (!trafficMesh) return;
   traffic.forEach((v, i) => {
-    const L = v.truck ? (v.side ? 9 : 13) : 4.5, H = v.truck ? 3.4 : 1.5, Wd = v.truck ? 2.5 : 1.85;
-    if (v.local && SITE.road) { const L2 = SITE.road.getLength(); v.u = (v.u + v.dir * v.sp * dt / L2 + 1) % 1; const p = SITE.road.getPointAt(v.u), tg = SITE.road.getTangentAt(v.u); const sideOff = v.dir > 0 ? 1.6 : -1.6; const nx = tg.z * sideOff, ny = -tg.x * sideOff; _tq.setFromAxisAngle(_up, Math.atan2(tg.x, -tg.z)); _tm.compose(_tp.set(p.x + nx, H / 2 + 0.3, -(p.z + ny)), _tq, _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
-    if (v.side) { v.y += v.dir * v.sp * dt; if (v.y > 420) v.y = -20; if (v.y < -20) v.y = 420; _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
-    v.x += v.dir * v.sp * dt; if (v.x > 520) v.x = -520; if (v.x < -520) v.x = 520;
-    if (v.y > -30 && v.x > 90) v.x = v.dir > 0 ? -400 : 88;
-    _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(L, H, Wd)); trafficMesh.setMatrixAt(i, _tm);
+    let x, y, head;
+    if (v.local && SITE.road) { const L2 = SITE.road.getLength(); v.u = (v.u + v.dir * v.sp * dt / L2 + 1) % 1; const p = SITE.road.getPointAt(v.u), tg = SITE.road.getTangentAt(v.u); const so = v.dir > 0 ? 1.6 : -1.6; x = p.x + tg.z * so; y = p.z - tg.x * so; head = Math.atan2(tg.x * v.dir, -tg.z * v.dir); }
+    else if (v.side) { v.y += v.dir * v.sp * dt; if (v.y > 420) v.y = -12; if (v.y < -12) v.y = 420; x = v.x; y = v.y; head = v.dir > 0 ? Math.PI : 0; }
+    else { v.x += v.dir * v.sp * dt; if (v.x > 520) v.x = -520; if (v.x < -520) v.x = 520; x = v.x; y = v.y; head = v.dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    v.spin += v.sp * dt / 0.36;
+    _bq.setFromAxisAngle(_up, head); _base.compose(_bp.set(x, 0, -y), _bq, _one);
+    const T = v.truck, L = T ? 12 : 4.5, Wd = T ? 2.5 : 1.85;
+    if (T) { vPart(trafficMesh.body, i, _base, 0, 2.15, -1.0, Wd, 2.9, L - 2.6); vPart(trafficMesh.cab, i, _base, 0, 1.65, L / 2 - 1.2, Wd - 0.05, 2.3, 2.2); }
+    else { vPart(trafficMesh.body, i, _base, 0, 0.72, 0, Wd, 0.72, L); vPart(trafficMesh.cab, i, _base, 0, 1.28, -0.2, Wd - 0.22, 0.6, 2.4); }
+    _wq.setFromEuler(_e.set(v.spin, 0, Math.PI / 2));
+    const axles = T ? [L / 2 - 1.4, -L / 2 + 2.6, -L / 2 + 1.2] : [1.42, -1.42], r = T ? 0.5 : 0.34;
+    let k = 0; for (const az of axles) for (const sx of [-1, 1]) { vPart(trafficMesh.wheel, i * 6 + k, _base, sx * (Wd / 2 - 0.12), r, az, r, 0.24, r, _wq); vPart(trafficMesh.rim, i * 6 + k, _base, sx * (Wd / 2 - 0.0), r, az, r * 0.6, 0.03, r * 0.6, _wq); k++; }
+    for (; k < 6; k++) { vPart(trafficMesh.wheel, i * 6 + k, _base, 0, -5, 0, 0.001, 0.001, 0.001); vPart(trafficMesh.rim, i * 6 + k, _base, 0, -5, 0, 0.001, 0.001, 0.001); }
+    for (const sx of [-1, 1]) vPart(trafficMesh.lamp, i * 2 + (sx > 0 ? 1 : 0), _base, sx * (Wd / 2 - 0.3), T ? 0.9 : 0.75, L / 2 + 0.005, 0.32, 0.12, 0.02);
   });
-  trafficMesh.instanceMatrix.needsUpdate = true;
+  for (const m of Object.values(trafficMesh)) m.instanceMatrix.needsUpdate = true;
 }
 function buildCars(bays) {
   const n = bays.length; if (!n) return;
@@ -1731,47 +1797,149 @@ function updateWalk(dt) {
 }
 
 /* ---------- tour (camera paths) ---------- */
+/* ==========================================================================
+   FILM — 76,8 s op 100 BPM (maat = 2,4 s); elke wissel valt op een maat
+   ========================================================================== */
+const BPM = 100, BEAT = 60 / BPM, BAR = BEAT * 4;
 const SHOTS = [
-  { t: 'Nieuwbouw bedrijfsruimte', s: 'Bedrijfsruimte met de tomatenkas erachter — Hoge Noordweg 6a, Naaldwijk', d: 11, cut: true,
-    p: [W(78, -92, 68), W(64, -80, 54), W(50, -64, 40)], q: [W(26, 50, 0), W(25, 38, 0), W(22, 20, 3)] },
-  { t: 'Parkeerplein en entree', s: 'Entree onder een puntig rieten dak; links de laad- en losdeuren, op de kopgevel het neonlogo', d: 10, cut: true,
-    p: [W(42, -6, 9), W(31, -3, 4.6), W(17.9, -3, 2.2), W(17.9, 6.5, 1.75)], q: [W(14, 6, 4.5), W(17, 7, 3.6), W(17.9, 10, 2.0), W(17.9, 14, 1.75)] },
-  { t: 'Entree 0.01', s: 'Hygiënesluis: blauwe bakken, schoenborstels in de vloer en een buisje dat opendraait — daarachter de hal', d: 7,
-    p: [W(17.9, 6.5, 1.75), W(17.9, 10.5, 1.7), W(17.9, 13.4, 1.7), W(20.2, 14.6, 1.9)], q: [W(17.9, 14, 1.75), W(17.9, 18, 1.7), W(21, 16, 2.0), W(25, 10, 2.8)] },
-  { t: 'Ontvangstruimte 0.03', s: 'Dubbelhoge ruimte met daglicht door de glazen entreegevel; op tafel schalen met tomaten', d: 9,
-    p: [W(20.2, 14.6, 1.9), W(21.6, 15.2, 2.6), W(23.2, 15.0, 3.6)], q: [W(22.6, 9, 1.2), W(20, 9, 3.2), W(18, 8.5, 5.2)] },
-  { t: 'Hal 0.02', s: 'Open hal met keukeneiland; de trap voert naar de verdieping op +3200', d: 11,
-    p: [W(22.6, 15.0, 3.0), W(21.0, 15.6, 1.9), W(18.8, 16.2, 1.72), W(18.8, 18.5, 2.9), W(18.8, 21.2, 4.6), W(18.9, 22.8, 4.9)], q: [W(17, 20, 2.0), W(18.8, 20, 2.2), W(18.8, 22, 3.0), W(18.8, 24, 4.4), W(19, 24, 4.9), W(22, 22.8, 4.9)] },
-  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes en een groot scherm', d: 11,
-    p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(32, 21.2, 5.0), W(36.5, 20.6, 5.0)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19, 4.8), W(37.5, 18, 4.6), W(42, 20.6, 4.5)] },
-  { t: 'De tomatenkas', s: 'Tomatenplanten aan de hoge draad — per vak een ander ras: rood, geel, oranje, bruin en cherry', d: 12,
-    p: [W(28, 26.5, 3.4), W(42, 26.6, 2.6), W(48.0, 30.0, 1.6), W(48.0, 40.0, 1.5), W(48.0, 56.0, 1.45)], q: [W(44, 26.6, 2.6), W(48, 32, 2.0), W(48, 44, 1.5), W(48, 60, 1.3), W(48, 76, 1.3)], cut: true },
-  { t: 'Totaalbeeld', s: 'Bedrijfsruimte en kas als één geheel in het Westlandse kassengebied', d: 14, cut: true,
-    p: [W(95, 60, 26), W(115, -20, 55), W(70, -100, 80), W(-10, -115, 90)], q: [W(28, 70, 3), W(28, 55, 0), W(25, 40, 0), W(25, 40, 0)] },
+  { t: 'Nieuwbouw bedrijfsruimte', s: 'Axia Vegetable Seeds — Hoge Noordweg 6a, Naaldwijk', d: 9.6, cut: true,
+    p: [W(85, -95, 72), W(62, -76, 52), W(44, -56, 38)], q: [W(28, 55, 0), W(25, 40, 0), W(20, 15, 3)] },
+  { t: 'Kopgevel aan de weg', s: 'Neonlogo en laadpalen voor elektrische auto’s', d: 4.8, cut: true,
+    p: [W(-6, -14, 2.2), W(2, -11.5, 2.0), W(9, -9.6, 2.4)], q: [W(5, 0, 3.6), W(5.2, 0, 3.3), W(8, 0, 2.9)] },
+  { t: 'Laad- en losdeuren', s: 'Twee overheaddeuren naar goederenontvangst en container', d: 4.8, cut: true,
+    p: [W(21, -7, 3.0), W(17, -3.2, 2.4), W(13.8, 1.2, 1.9)], q: [W(10.3, 2.5, 2.4), W(10.3, 3.5, 2.2), W(7, 4.5, 1.6)] },
+  { t: 'Entree', s: 'Puntig rieten luifeldak op eiken staanders', d: 4.8, cut: true,
+    p: [W(25, -7, 3.2), W(20, -2.5, 2.3), W(17.9, 3, 1.75), W(17.9, 7, 1.75)], q: [W(17.9, 6, 3.6), W(17.9, 8, 2.7), W(17.9, 12, 1.75), W(17.9, 14, 1.6)] },
+  { t: 'Hygiënesluis', s: 'Borstels in de vloer, het buisje draait open', d: 4.8,
+    p: [W(17.9, 7, 1.75), W(17.9, 10.5, 1.6), W(17.9, 12.4, 1.45), W(17.9, 14.6, 1.6)], q: [W(17.9, 14, 1.3), W(17.9, 13.4, 0.4), W(17.9, 16, 1.3), W(18, 20, 1.6)] },
+  { t: 'Ontvangstruimte 0.03', s: 'Dubbelhoge ruimte met lattenwand en balie', d: 4.8,
+    p: [W(18.6, 15, 1.8), W(21.5, 15.2, 2.6), W(23.6, 14.6, 3.8)], q: [W(21, 8, 2.2), W(19.5, 10, 4.2), W(20, 8, 5.5)] },
+  { t: 'Kantine 0.05', s: 'Lange tafel, schaal met tomaten', d: 4.8, cut: true,
+    p: [W(15.6, 8.6, 1.65), W(14.6, 9.6, 1.5), W(12.8, 10.1, 1.4)], q: [W(11, 12.5, 1.0), W(12, 12.6, 0.9), W(11, 13, 1.0)] },
+  { t: 'Hal 0.02', s: 'Keukeneiland en trap naar de verdieping', d: 4.8, cut: true,
+    p: [W(21.4, 15.6, 1.9), W(18.8, 16.2, 1.72), W(18.8, 18.5, 2.9), W(18.8, 21.2, 4.6), W(18.9, 22.8, 4.9)], q: [W(18.8, 20, 2.2), W(18.8, 22, 3.0), W(18.8, 24, 4.4), W(19, 24, 4.9), W(22, 22.8, 4.9)] },
+  { t: 'Presentatieruimte 1.02', s: 'Rassenpresentatie: tomaten in kistjes', d: 7.2,
+    p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(33, 21.4, 5.0), W(36.2, 19.6, 4.65)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19.5, 4.6), W(37.5, 17.9, 4.0), W(37.7, 17.8, 4.1)] },
+  { t: 'Demoruimte 0.13', s: 'Rood, geel, oranje, bruin en cherry', d: 4.8, cut: true,
+    p: [W(31, 22.9, 1.95), W(34, 21.0, 1.55), W(37.5, 19.6, 1.35)], q: [W(36, 19.5, 0.9), W(38, 18.3, 0.9), W(40, 19.6, 0.9)] },
+  { t: 'De tomatenkas', s: 'Tomaten aan de hoge draad — per vak een ander ras', d: 7.2, cut: true,
+    p: [W(48, 29, 1.3), W(48, 40, 1.45), W(48, 52, 1.5), W(48, 60, 1.6)], q: [W(47.6, 36, 1.2), W(48, 48, 1.4), W(48.3, 60, 1.5), W(48, 70, 1.6)] },
+  { t: 'Boven de kas', s: 'Venlokas van 55 × 96 m achter de bedrijfsruimte', d: 4.8,
+    p: [W(48, 60, 1.6), W(46, 66, 4.5), W(42, 74, 12), W(36, 84, 26)], q: [W(48, 70, 1.6), W(46, 78, 3.0), W(38, 60, 2.0), W(28, 40, 0)] },
+  { t: 'Totaalbeeld', s: 'Bedrijfsruimte en kas als één geheel', d: 9.6,
+    p: [W(36, 84, 26), W(70, 60, 45), W(82, -20, 60), W(62, -80, 70)], q: [W(28, 40, 0), W(28, 40, 0), W(26, 35, 0), W(26, 35, 0)] },
 ];
 SHOTS.forEach(s => { s.pc = new THREE.CatmullRomCurve3(s.p, false, 'centripetal'); s.qc = new THREE.CatmullRomCurve3(s.q, false, 'centripetal'); });
 const TOUR_LEN = SHOTS.reduce((a, s) => a + s.d, 0);
-let tourT = 0, lastShot = -1;
+const SHOT_START = []; { let a = 0; for (const s of SHOTS) { SHOT_START.push(a); a += s.d; } }
+const CUTS = SHOT_START.filter((t, i) => i > 0 && SHOTS[i].cut);
+const HITS = [[19.2, 0.6], [55.2, 1.6], [67.2, 0.8]];
+let tourT = 0, lastShot = -1, tourPaused = false;
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeSoft = t => t * t * (3 - 2 * t);
+const P01 = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const pulse = (t, at, decay) => t < at ? 0 : Math.exp(-(t - at) * decay);
+const fmtT = t => { const m = Math.floor(t / 60), sec = Math.floor(t % 60); return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); };
+function seekTour(t) { tourT = Math.max(0, Math.min(TOUR_LEN - 0.01, t)); lastShot = -1; AUD.resync = true; }
+window.seek = seekTour;
 function updateTour(dt) {
-  if (!window.__freeze) tourT += dt;
+  if (!window.__freeze && !tourPaused) tourT += dt;
   if (tourT >= TOUR_LEN) { setMode('orbit'); return; }
-  let acc = 0, i = 0; while (i < SHOTS.length - 1 && tourT > acc + SHOTS[i].d) { acc += SHOTS[i].d; i++; }
-  const S = SHOTS[i], u = (tourT - acc) / S.d;
-  const eu = (S.cut ? ease(u) : easeSoft(u) * 0.5 + u * 0.5);
+  const i = Math.max(0, SHOT_START.findLastIndex(st => st <= tourT)), S = SHOTS[i], acc = SHOT_START[i], u = (tourT - acc) / S.d;
+  const contIn = !S.cut, contOut = SHOTS[i + 1] && !SHOTS[i + 1].cut;
+  // continue reeksen: lineair door de overgang; losse shots: zacht in- en uitlopen
+  const eu = contIn && contOut ? u : contIn ? u + u * u - u * u * u : contOut ? u * u * (2 - u) : easeSoft(u) * 0.6 + u * 0.4;
   camera.position.copy(S.pc.getPoint(eu)); camera.lookAt(S.qc.getPoint(eu));
-  // fades across hard cuts
-  let f = 0; const next = SHOTS[i + 1];
-  if (S.cut && tourT - acc < 0.7) f = 1 - (tourT - acc) / 0.7;
-  if (next && next.cut && acc + S.d - tourT < 0.7) f = 1 - (acc + S.d - tourT) / 0.7;
-  $('#fade').style.opacity = f.toFixed(3);
+  // camerastoot bij inslagen
+  let sh = 0; for (const [at, k] of HITS) sh += pulse(tourT, at, 6) * k;
+  if (sh > 0.002) { camera.position.x += Math.sin(tourT * 71) * 0.05 * sh; camera.position.y += Math.sin(tourT * 53 + 1) * 0.04 * sh; }
+  // korte bewegingsonscherpte op elke wissel + fade bij begin
+  let bl = 0; for (const c of CUTS) bl = Math.max(bl, 1 - Math.abs(tourT - c) / 0.16);
+  cv.style.filter = bl > 0.02 ? `blur(${(bl * 7).toFixed(1)}px)` : '';
+  $('#fade').style.opacity = (1 - P01(tourT, 0, 1.2)).toFixed(3);
   if (i !== lastShot) {
     lastShot = i; const cap = $('#caption'); cap.classList.remove('on');
-    setTimeout(() => { if (mode !== 'tour') return; $('#capK').textContent = String(i + 1).padStart(2, '0') + ' / ' + String(SHOTS.length).padStart(2, '0'); $('#capT').textContent = S.t; $('#capS').textContent = S.s; cap.classList.add('on'); }, 420);
+    setTimeout(() => { if (mode !== 'tour' || lastShot !== i) return; $('#capK').textContent = String(i + 1).padStart(2, '0') + ' / ' + String(SHOTS.length).padStart(2, '0'); $('#capT').textContent = S.t; $('#capS').textContent = S.s; cap.classList.add('on'); }, 260);
   }
+  // eindkaart
+  const ec = P01(tourT, 70.8, 72.0); $('#endcard').style.opacity = ec.toFixed(3); $('#endcard').hidden = ec <= 0;
+  if (ec > 0) $('#caption').classList.remove('on');
   $('#tourfill').style.width = (tourT / TOUR_LEN * 100) + '%';
+  $('#tourTime').textContent = fmtT(tourT) + ' / ' + fmtT(TOUR_LEN);
+  if (AUD.on) audioTick();
 }
+
+/* ---------- soundtrack: Web Audio, gesynthetiseerd (start na een klik) ---------- */
+const AUD = { ctx: null, on: false, bus: null, music: null, sfx: null, noise: null, sched: 0, resync: true };
+const CHORDS = [[57, 60, 64, 69], [53, 57, 60, 65], [48, 55, 60, 64], [55, 59, 62, 67]]; // Am – F – C – G
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function audioInit() {
+  if (AUD.ctx) return; const ctx = AUD.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3; const master = ctx.createGain(); master.gain.value = 0.85; master.connect(comp); comp.connect(ctx.destination); AUD.master = master;
+  const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; AUD.noise = nb;
+  newBus();
+}
+function newBus() { const ctx = AUD.ctx; if (AUD.bus) { const old = AUD.bus; old.gain.setTargetAtTime(0, ctx.currentTime, 0.03); setTimeout(() => old.disconnect(), 300); } AUD.bus = ctx.createGain(); AUD.bus.connect(AUD.master); AUD.music = ctx.createGain(); AUD.music.gain.value = 0.45; AUD.music.connect(AUD.bus); AUD.sfx = ctx.createGain(); AUD.sfx.gain.value = 0.7; AUD.sfx.connect(AUD.bus); }
+function tone(type, f, at, dur, g, dest, o = {}) {
+  const ctx = AUD.ctx, os = ctx.createOscillator(), gn = ctx.createGain(); os.type = type; os.frequency.setValueAtTime(f, at); if (o.to) os.frequency.exponentialRampToValueAtTime(o.to, at + dur); if (o.detune) os.detune.value = o.detune;
+  const a = o.a ?? 0.01, r = o.r ?? 0.2; gn.gain.setValueAtTime(0, at); gn.gain.linearRampToValueAtTime(g, at + a); gn.gain.setValueAtTime(g, at + Math.max(a, dur - r)); gn.gain.linearRampToValueAtTime(0, at + dur);
+  let node = os; if (o.lp) { const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = o.lp; f2.Q.value = o.q || 0.7; if (o.lpTo) f2.frequency.exponentialRampToValueAtTime(o.lpTo, at + dur); os.connect(f2); node = f2; }
+  node.connect(gn); gn.connect(dest); os.start(at); os.stop(at + dur + 0.05);
+}
+function noise(at, dur, g, dest, o = {}) {
+  const ctx = AUD.ctx, src = ctx.createBufferSource(); src.buffer = AUD.noise; src.loop = true; const f = ctx.createBiquadFilter(); f.type = o.type || 'bandpass'; f.frequency.setValueAtTime(o.f || 1000, at); if (o.fTo) f.frequency.exponentialRampToValueAtTime(o.fTo, at + dur); f.Q.value = o.q || 1;
+  const gn = ctx.createGain(); gn.gain.setValueAtTime(0, at); gn.gain.linearRampToValueAtTime(g, at + (o.a ?? 0.02)); gn.gain.linearRampToValueAtTime(0, at + dur); src.connect(f); f.connect(gn); gn.connect(dest); src.start(at, Math.random()); src.stop(at + dur + 0.05);
+}
+const SFX = {
+  whoosh: at => noise(at, 0.42, 0.55, AUD.sfx, { f: 300, fTo: 3500, q: 0.9, a: 0.3 }),
+  hit: (at, k = 1) => { tone('sine', 140, at, 0.6, 0.7 * k, AUD.sfx, { to: 42, a: 0.003, r: 0.5 }); noise(at, 0.25, 0.35 * k, AUD.sfx, { type: 'lowpass', f: 2400, a: 0.002 }); },
+  click: at => { tone('square', 1800, at, 0.03, 0.12, AUD.sfx, { a: 0.001, r: 0.02 }); tone('sine', 900, at + 0.035, 0.05, 0.1, AUD.sfx, { a: 0.001, r: 0.04 }); },
+  door: at => noise(at, 0.9, 0.18, AUD.sfx, { f: 600, fTo: 1400, q: 0.6, a: 0.2 }),
+  rumble: at => { noise(at, 2.4, 0.22, AUD.sfx, { type: 'lowpass', f: 220, q: 0.5, a: 0.3 }); for (let k = 0; k < 10; k++) tone('square', 60 + k % 3 * 7, at + k * 0.2, 0.05, 0.03, AUD.sfx, { a: 0.003, r: 0.04 }); },
+  bell: at => { for (const [m, g] of [[1, 0.2], [2.76, 0.08], [5.4, 0.04]]) tone('sine', 880 * m, at, 2.6, g, AUD.sfx, { a: 0.003, r: 2.4 }); },
+  riser: (at, dur) => { noise(at, dur, 0.35, AUD.sfx, { type: 'highpass', f: 400, fTo: 9000, q: 0.7, a: dur * 0.9 }); tone('sawtooth', 110, at, dur, 0.06, AUD.sfx, { to: 880, a: dur * 0.8, lp: 800, lpTo: 6000 }); },
+  sub: at => tone('sine', 55, at, 2.8, 0.75, AUD.sfx, { to: 33, a: 0.01, r: 2.2 }),
+};
+// gebeurtenissenlijst [tijd, functie(when)]
+const EVENTS = (() => {
+  const ev = [], bars = Math.round(TOUR_LEN / BAR);
+  const grooveOn = t => (t >= 9.6 && t < 50.4) || (t >= 55.2 && t < 67.2);
+  for (let b = 0; b < bars; b++) {
+    const t0 = b * BAR, ch = CHORDS[b % 4], end = t0 >= 67.2;
+    const padG = t0 < 9.6 ? 0.05 : t0 >= 50.4 && t0 < 55.2 ? 0.045 : end ? 0 : 0.07;
+    if (padG) ev.push([t0, at => { for (const m of ch) for (const dt of [-7, 7]) tone('sawtooth', mtof(m), at, BAR + 0.15, padG / 2, AUD.music, { detune: dt, a: 0.6, r: 0.8, lp: t0 >= 55.2 ? 2600 : 1400 }); }]);
+    for (let k = 0; k < 4; k++) {
+      const t = t0 + k * BEAT;
+      if (grooveOn(t)) {
+        ev.push([t, at => { tone('sine', 120, at, 0.32, 0.9, AUD.music, { to: 42, a: 0.002, r: 0.28 }); }]);
+        ev.push([t + BEAT / 2, at => noise(at, 0.06, 0.12, AUD.music, { type: 'highpass', f: 8000, a: 0.002 })]);
+        const bn = ch[0] - 24; ev.push([t, at => tone('sawtooth', mtof(bn), at, BEAT * 0.45, 0.16, AUD.music, { lp: 420, lpTo: 180, a: 0.005, r: 0.12 })]);
+        if (k === 1 || k === 3) ev.push([t + BEAT * 0.5, at => tone('sawtooth', mtof(bn + 12), at, BEAT * 0.3, 0.08, AUD.music, { lp: 600, a: 0.005, r: 0.1 })]);
+        if (k === 1 || k === 3) ev.push([t, at => noise(at, 0.14, 0.12, AUD.music, { f: 1800, q: 0.8, a: 0.002 })]);
+      }
+      if (t >= 50.4 && t < 55.2) for (let s = 0; s < 4; s++) { const tt = t + s * BEAT / 4; const g = 0.03 + 0.09 * (tt - 50.4) / 4.8; ev.push([tt, at => noise(at, 0.04, g, AUD.music, { type: 'highpass', f: 7000, a: 0.002 })]); }
+    }
+  }
+  ev.push([50.4, at => SFX.riser(at, 4.8)]);
+  ev.push([55.2, at => { SFX.hit(at, 1.4); SFX.sub(at); for (const m of [45, 57, 60, 64, 69, 72]) tone('sawtooth', mtof(m), at, 4.8, 0.03, AUD.music, { a: 0.01, r: 3, lp: 3200, lpTo: 900 }); }]);
+  ev.push([67.2, at => { for (const m of [48, 55, 60, 64, 67, 71, 74]) for (const dt of [-6, 6]) tone('sawtooth', mtof(m), at, 9.4, 0.022, AUD.music, { detune: dt, a: 0.4, r: 6, lp: 2400, lpTo: 600 }); SFX.hit(at, 0.6); }]);
+  ev.push([70.8, at => SFX.bell(at)]);
+  for (const c of CUTS) ev.push([c - 0.24, at => SFX.whoosh(at)]);
+  ev.push([19.2, at => SFX.hit(at, 0.5)]); ev.push([15.0, at => SFX.rumble(at)]); ev.push([21.6, at => SFX.door(at)]); ev.push([26.6, at => SFX.click(at)]);
+  return ev.sort((a, b) => a[0] - b[0]);
+})();
+function audioTick() {
+  const ctx = AUD.ctx; if (!ctx || tourPaused) return;
+  if (AUD.resync) { newBus(); AUD.sched = tourT; AUD.resync = false; }
+  const ahead = tourT + 0.35;
+  for (const [t, fn] of EVENTS) if (t >= AUD.sched && t < ahead) fn(ctx.currentTime + 0.03 + (t - tourT));
+  AUD.sched = Math.max(AUD.sched, ahead);
+}
+function setSound(on) {
+  if (on) { audioInit(); AUD.ctx.resume(); AUD.resync = true; } else if (AUD.ctx) { AUD.resync = true; if (AUD.bus) AUD.bus.gain.setTargetAtTime(0, AUD.ctx.currentTime, 0.03); }
+  AUD.on = on; $('#sndBtn').setAttribute('aria-pressed', on); $('#sndBtn').classList.toggle('nudge', !on); $('#sndLbl').textContent = on ? 'Geluid aan' : 'Geluid uit';
+}
+function setPaused(p) { tourPaused = p; $('#playBtn').setAttribute('aria-label', p ? 'Afspelen' : 'Pauzeren'); $('#playIco').innerHTML = p ? '<path d="M7 5l12 7-12 7z"/>' : '<path d="M7 5h3v14H7zM14 5h3v14h-3z"/>'; if (AUD.ctx) { if (p) AUD.ctx.suspend(); else { AUD.ctx.resume(); AUD.resync = true; } } }
 
 /* ---------- orbit / maquette ---------- */
 const orbit = new OrbitControls(camera, renderer.domElement);
@@ -1806,7 +1974,7 @@ function setMode(m) {
   const prev = mode; mode = m;
   document.body.classList.toggle('tour', m === 'tour');
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
-  $('#skip').hidden = m !== 'tour'; $('#caption').classList.remove('on'); $('#fade').style.opacity = 0;
+  $('#player').hidden = m !== 'tour'; if (m !== 'tour') { cv.style.filter = ''; $('#endcard').hidden = true; if (AUD.ctx && AUD.bus) AUD.bus.gain.setTargetAtTime(0, AUD.ctx.currentTime, 0.05); AUD.resync = true; } $('#caption').classList.remove('on'); $('#fade').style.opacity = 0;
   orbit.enabled = m === 'orbit'; $('#cutGrp').hidden = m !== 'orbit';
   const walk = m === 'walk';
   $('#roomchip').hidden = !walk; $('#mapwrap').hidden = !walk; $('#gotoGrp').hidden = !walk; $('#reticle').hidden = true; hoverRing.visible = false; walkTarget = null; $('#joy').hidden = !(walk && isTouch);
@@ -1814,7 +1982,7 @@ function setMode(m) {
   if (!walk && document.pointerLockElement) document.exitPointerLock?.();
   camera.fov = walk ? 72 : 50; camera.updateProjectionMatrix();
   if (m !== 'orbit') setCut('all');
-  if (m === 'tour') { tourT = 0; lastShot = -1; }
+  if (m === 'tour') { seekTour(0); setPaused(false); }
   if (m === 'orbit') {
     if (prev !== 'tour') { camera.position.copy(W(60, -55, 45)); }
     orbit.target.copy(W(25, 30, 2)); orbit.update();
@@ -1871,7 +2039,13 @@ mm.addEventListener('click', e => {
 });
 // UI buttons
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode === mode && mode === 'tour' ? 'orbit' : b.dataset.mode)));
-document.querySelectorAll('[data-mode="tour"]').forEach(b => b.addEventListener('click', () => { tourT = 0; lastShot = -1; }));
+document.querySelectorAll('[data-mode="tour"]').forEach(b => b.addEventListener('click', () => { seekTour(0); }));
+$('#playBtn').addEventListener('click', () => setPaused(!tourPaused));
+$('#sndBtn').addEventListener('click', () => setSound(!AUD.on));
+{ const tb = $('#tourbar'); const sk = e => { const r = tb.getBoundingClientRect(); seekTour((e.clientX - r.left) / r.width * TOUR_LEN); }; let dragT = false;
+  tb.addEventListener('pointerdown', e => { dragT = true; tb.setPointerCapture(e.pointerId); sk(e); }); tb.addEventListener('pointermove', e => { if (dragT) sk(e); }); tb.addEventListener('pointerup', () => { dragT = false; });
+  tb.addEventListener('keydown', e => { if (e.key === 'ArrowRight') seekTour(tourT + BAR); if (e.key === 'ArrowLeft') seekTour(tourT - BAR); }); }
+addEventListener('keydown', e => { if (mode === 'tour' && e.code === 'Space' && document.activeElement?.tagName !== 'TEXTAREA') { e.preventDefault(); setPaused(!tourPaused); } });
 document.querySelectorAll('[data-cut]').forEach(b => b.addEventListener('click', () => setCut(b.dataset.cut)));
 document.querySelectorAll('[data-time]').forEach(b => b.addEventListener('click', () => applyPreset(b.dataset.time)));
 $('#skip').addEventListener('click', () => setMode('orbit'));
@@ -2262,7 +2436,7 @@ function cullCrops() {
   const x = camera.position.x, y = -camera.position.z, h = camera.position.y;
   for (const c of cropChunks) {
     const dx = Math.max(c.x0 - x, 0, x - c.x1), dy = Math.max(c.y0 - y, 0, y - c.y1), d = Math.hypot(dx, dy, Math.max(0, h - 4));
-    c.fruit.visible = d < (mode === 'orbit' ? 60 : 38); c.leaves.visible = d < (mode === 'walk' ? 110 : 220);
+    c.fruit.visible = d < (mode === 'orbit' ? 60 : 38); c.leaves.visible = d < (mode === 'walk' ? 90 : 220); if (c.stems) c.stems.visible = d < 60;
   }
 }
 function frame() {
@@ -2311,7 +2485,7 @@ async function boot() {
   try { await Promise.race([Promise.all([document.fonts.load('800 40px Archivo'), document.fonts.load('800 40px Nunito'), document.fonts.load('600 40px Nunito')]), new Promise(r => setTimeout(r, 2000))]); } catch (e) { }
   try { logoImg = await Promise.race([new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = LOGO_SRC; }), new Promise(r => setTimeout(() => r(null), 3000))]); } catch (e) { logoImg = null; }
   if (logoImg) { LOGO_W = logoImg.naturalWidth; LOGO_H = logoImg.naturalHeight; }
-  paintLogoCanvas('ldLogo'); paintLogoCanvas('brandLogo');
+  paintLogoCanvas('ldLogo'); paintLogoCanvas('brandLogo'); paintLogoCanvas('endLogo');
   setLoad(0.08, 'Materialen genereren…'); await tick();
   buildTextures(); buildMaterials();
   setLoad(0.3, 'Bedrijfsruimte opbouwen…'); await tick();

@@ -5,7 +5,7 @@ opgebouwd vanuit tekening 218300-B (begane grond rev2 en verdieping, 1:100).
 
 Open `index.html` in een recente browser (internet nodig voor three.js en lettertypes).
 
-- **Drone-tour** – cinematografische vlucht van buiten naar binnen, via entree, ontvangstruimte, hal en trap naar de presentatieruimte en de kas.
+- **Film (Drone-tour)** – 76,8 s, 13 shots op een maatraster van 100 BPM: aankomst, kopgevel met neonlogo, laad- en losdeuren, entree, sluis, ontvangst, kantine, hal, presentatieruimte, demoruimte, tomatenkas, omhoog door het kasdak en eindkaart. Met gesynthetiseerde soundtrack en geluidseffecten (knop *Geluid*), pauze (spatie) en een tijdlijn om door te spoelen.
 - **Rondlopen** – klik op de vloer en je loopt er vanzelf heen; slepen om rond te kijken; WASD/pijltjes om zelf te lopen (mobiel: tikken, vegen of joystick). Met minikaart, ruimtenaam en "Ga naar".
 - **Maquette** – vrij draaien, met doorsneden per bouwlaag en ruimtelabels.
 - **Tomaten** – tomatenplanten aan de hoge draad met per vak een ander ras (rood, geel, oranje, bruin, cherry, roze, groen, paars); rassen gepresenteerd in kistjes in de demo- en presentatieruimte.
