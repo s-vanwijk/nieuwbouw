@@ -6,7 +6,7 @@ opgebouwd vanuit tekening 218300-B (begane grond rev2 en verdieping, 1:100).
 Open `index.html` in een recente browser (internet nodig voor three.js en lettertypes).
 
 - **Drone-tour** – cinematografische vlucht van buiten naar binnen, via entree, ontvangstruimte, hal en trap naar de presentatieruimte en de kas.
-- **Rondlopen** – zelf lopen met WASD/pijltjes + muis (mobiel: joystick + vegen), met minikaart, ruimtenaam en "Ga naar".
+- **Rondlopen** – klik op de vloer en je loopt er vanzelf heen; slepen om rond te kijken; WASD/pijltjes om zelf te lopen (mobiel: tikken, vegen of joystick). Met minikaart, ruimtenaam en "Ga naar".
 - **Maquette** – vrij draaien, met doorsneden per bouwlaag en ruimtelabels.
 - **Tomaten** – tomatenplanten aan de hoge draad met per vak een ander ras (rood, geel, oranje, bruin, cherry, roze, groen, paars); rassen gepresenteerd in kistjes in de demo- en presentatieruimte.
 - **Logo** – het originele Axia-logo zit ingebouwd (ook als `axia-logo.png`); op de kopgevel aan de weg als neonlogo dat 's avonds oplicht.

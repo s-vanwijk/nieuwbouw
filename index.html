@@ -195,12 +195,13 @@ body.picking #stage canvas{cursor:crosshair}
 <div id="hint" class="pnl" hidden>
   <h2>Rondlopen</h2>
   <dl>
-    <dt>W A S D</dt><dd>Lopen (of pijltjestoetsen)</dd>
-    <dt>MUIS</dt><dd>Rondkijken</dd>
+    <dt>KLIK</dt><dd>Klik op de vloer en je loopt er vanzelf heen</dd>
+    <dt>SLEPEN</dt><dd>Rondkijken</dd>
+    <dt>W A S D</dt><dd>Zelf lopen (of pijltjestoetsen)</dd>
     <dt>SHIFT</dt><dd>Sneller lopen</dd>
     <dt>KAART</dt><dd>Klik op de plattegrond om te verplaatsen</dd>
     <dt>F</dt><dd>Feedback plaatsen op de plek in het midden</dd>
-    <dt>ESC</dt><dd>Muis weer vrijgeven</dd>
+    <dt>GA NAAR</dt><dd>Direct naar een ruimte via het menu onderin</dd>
   </dl>
   <div class="go">Klik om te beginnen</div>
 </div>
@@ -281,6 +282,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 /* ==========================================================================
    Coördinaten: plan-x (m) langs stramien 1→9 (0..40), plan-y (m) langs A→D (0..24).
@@ -301,7 +303,7 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 /* ---------- renderer ---------- */
 const stage = $('#stage');
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-const PR = Math.min(devicePixelRatio, lowGPU ? 1.25 : 1.75);
+const PR = Math.min(devicePixelRatio, lowGPU ? 1.5 : 2);
 renderer.setPixelRatio(PR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -360,6 +362,16 @@ function buildTextures() {
   T.panel = tex(p.c, 1);
   let b = pix(256, (x) => { let v = 140; if (x < 3) v = 30; else if (x % 32 === 0) v = 95; else if (x % 32 === 1) v = 170; return [v, v, v]; });
   T.panelBump = tex(b.c, 1, false);
+  // bladtextuur (tegelbaar), tomaat en herfstbomen
+  const drawLeaves = (seed, hue0, hue1, bg, count) => { const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'); if (bg) { g.fillStyle = bg; g.fillRect(0, 0, 512, 512); } const r = mulberry(seed);
+    for (let i = 0; i < count; i++) { const x = r() * 512, y = r() * 512, L = 9 + r() * 20, a = r() * 6.28, hh = hue0 + r() * (hue1 - hue0), sat = 35 + r() * 30, li = 16 + r() * 24;
+      for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) { const X = x + ox, Y = y + oy; if (X < -40 || X > 552 || Y < -40 || Y > 552) continue;
+        g.save(); g.translate(X, Y); g.rotate(a); g.fillStyle = `hsl(${hh},${sat}%,${li}%)`; g.beginPath(); g.moveTo(-L, 0); g.quadraticCurveTo(0, -L * 0.5, L, 0); g.quadraticCurveTo(0, L * 0.5, -L, 0); g.fill();
+        g.strokeStyle = `hsla(${hh},${sat}%,${li + 14}%,.55)`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-L * 0.9, 0); g.lineTo(L * 0.9, 0); g.stroke(); g.restore(); } }
+    return c; };
+  T.leafRow = tex(drawLeaves(91, 88, 112, null, 1500), 1 / 0.9);
+  T.leafSolid = tex(drawLeaves(92, 88, 112, '#1f3a1a', 900), 1);
+  T.leafTree = tex(drawLeaves(93, 32, 95, null, 1100), 1);
   T.panelR = T.panel.clone(); T.panelR.center.set(0.5, 0.5); T.panelR.rotation = Math.PI / 2; T.panelR.needsUpdate = true;
   T.panelBumpR = T.panelBump.clone(); T.panelBumpR.center.set(0.5, 0.5); T.panelBumpR.rotation = Math.PI / 2; T.panelBumpR.needsUpdate = true;
   // riet (dakbedekking luifel): stro in lagen
@@ -396,7 +408,7 @@ function buildTextures() {
   T.grass = tex(p.c, 1 / 7);
   // asfalt
   n = tnoise(512, 6, 5, 41);
-  p = pix(512, (x, y, i) => { const v = 62 + (n[i] - .5) * 22 + (rnd() - .5) * 26; return [v, v, v + 2]; });
+  p = pix(512, (x, y, i) => { const v = 84 + (n[i] - .5) * 26 + (rnd() - .5) * 30; return [v, v, v + 3]; });
   T.asphalt = tex(p.c, 1 / 5);
   // klinkers 0,21 x 0,105 halfsteens
   p = pix(512, () => [120, 120, 120]);
@@ -481,6 +493,7 @@ function buildMaterials() {
   defMat('carton', { color: 0xb7905e, roughness: 0.9 });
   defMat('crate', { color: 0x2f6a3a, roughness: 0.7 });
   defMat('leaf', { color: 0x4f7a3a, roughness: 0.8 });
+  defMat('cropLeaf', { map: T.leafRow, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8 }, { cast: false });
   defMat('pot', { color: 0x2b2e2c, roughness: 0.6 });
   defMat('led', { color: 0xffffff, emissive: 0xfff6e8, emissiveIntensity: 2.2 }, { cast: false });
   defMat('lamp', { color: 0xffffff, emissive: 0xffe2b0, emissiveIntensity: 0 }, { cast: false });
@@ -963,7 +976,7 @@ function buildBuilding() {
 }
 
 // neonlogo op de kopgevel van volume A (aan de weg); licht 's avonds op
-let neonSign = null;
+let neonSign = null; const interiorLights = [];
 function buildNeon() {
   const c = document.createElement('canvas'); c.width = 2048; c.height = Math.round(2048 * LOGO_H / LOGO_W); const g = c.getContext('2d'); drawLogo(g, 0, 0, c.height);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANI;
@@ -1062,7 +1075,7 @@ function buildCrops() {
     return mergeGeometries(parts.map(g => { g.deleteAttribute('uv'); return g; }));
   };
   const tCache = {}; const trussFor = V => tCache[V.n] || (tCache[V.n] = truss(!!V.cherry, V.r));
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78 }); leafMat.clippingPlanes = CLIP;
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, map: T.leafSolid }); leafMat.clippingPlanes = CLIP;
   const fruitMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.0 }); fruitMat.clippingPlanes = CLIP;
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
   const pipes = []; let vi = 0;
@@ -1076,14 +1089,15 @@ function buildCrops() {
         colliders.push({ x0: x - 0.32, x1: x + 0.32, y0, y1, z0: 0, z1: 3, active: true });
         box('white', x - 0.13, y0, 0.42, x + 0.13, y1, 0.56);                 // teeltgoot
         box('white', x - 0.01, y0, 3.55, x + 0.01, y1, 3.57);                 // draaddraad
+        for (const dx of [-0.13, 0.13]) poly('cropLeaf', [W(x + dx, y0 + 0.2, 1.25), W(x + dx, y1 - 0.2, 1.25), W(x + dx * 0.6, y1 - 0.2, 3.4), W(x + dx * 0.6, y0 + 0.2, 3.4)]); // bladwand
         for (let y = y0 + 0.3; y < y1 - 0.2; y += dens) spots.push([x + rr(-0.04, 0.04), y + rr(-0.05, 0.05)]);
       }
       if (!spots.length) continue;
       const lm = inst(plantGeo, leafMat, spots.length, false), tm = inst(trussFor(V), fruitMat, spots.length, false);
       spots.forEach(([x, y], i) => {
         q.setFromAxisAngle(_up, (rnd() < 0.5 ? 0 : Math.PI) + rr(-0.35, 0.35)); const s2 = rr(0.9, 1.1);
-        mtx.compose(pv.set(x, 0, -y), q, sc.set(s2, rr(0.92, 1.08), s2)); lm.setMatrixAt(i, mtx);
-        c.setRGB(0.2 * rr(.8, 1.15), 0.4 * rr(.85, 1.12), 0.17 * rr(.75, 1.2)).convertSRGBToLinear(); lm.setColorAt(i, c);
+        mtx.compose(pv.set(x, 0, -y), q, sc.set(s2 * 0.7, rr(0.92, 1.08), s2 * 0.75)); lm.setMatrixAt(i, mtx);
+        c.setRGB(rr(0.85, 1.15), rr(0.9, 1.15), rr(0.85, 1.1)); lm.setColorAt(i, c);
         mtx.compose(pv.set(x, 0, -y), q, sc.set(1, rr(0.95, 1.05), 1)); tm.setMatrixAt(i, mtx);
         c.set(V.c); c.offsetHSL(rr(-0.01, 0.01), 0, rr(-0.04, 0.04)); tm.setColorAt(i, c);
       });
@@ -1346,7 +1360,13 @@ function buildTrees(list) {
   const pal = [0x6f7d3a, 0x86883c, 0xa8892f, 0xbf9a3a, 0x5f6f34, 0x7e6a2c, 0x9a7a2a, 0x6a7a33];
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
   trunks.forEach(([x, y, h, r], i) => { mtx.compose(new THREE.Vector3(x, 0, -y), q, new THREE.Vector3(r, h, r)); tm.setMatrixAt(i, mtx); });
-  crowns.forEach(([x, y, z, r, h], i) => { q.setFromAxisAngle(_up, rnd() * 6); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r, h, r)); cm.setMatrixAt(i, mtx); c.set(pick(pal)); cm.setColorAt(i, c); });
+  // bladkaarten rond elke kroon: geeft een rafelige, echte boomrand
+  const cards = []; for (let k = 0; k < 10; k++) { const pg = new THREE.PlaneGeometry(1.0, 1.0); pg.rotateY(rnd() * Math.PI); pg.rotateX(rr(-0.8, 0.8)); const d = new THREE.Vector3(rr(-1, 1), rr(-0.7, 1), rr(-1, 1)).normalize().multiplyScalar(rr(0.35, 0.7)); pg.translate(d.x, d.y, d.z);
+    const pa = pg.attributes.position, na = pg.attributes.normal; for (let j = 0; j < pa.count; j++) { const v = new THREE.Vector3().fromBufferAttribute(pa, j).normalize(); na.setXYZ(j, v.x, v.y, v.z); } cards.push(pg); }
+  const cardGeo = mergeGeometries(cards);
+  const lm = inst(cardGeo, new THREE.MeshStandardMaterial({ map: T.leafTree, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.85 }), crowns.length, true);
+  crowns.forEach(([x, y, z, r, h], i) => { q.setFromAxisAngle(_up, rnd() * 6); mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r * 0.82, h * 0.82, r * 0.82)); cm.setMatrixAt(i, mtx); c.set(pick(pal)).multiplyScalar(0.7); cm.setColorAt(i, c);
+    mtx.compose(new THREE.Vector3(x, z, -y), q, new THREE.Vector3(r * 1.25, h * 1.2, r * 1.25)); lm.setMatrixAt(i, mtx); c.set(pick(pal)).lerp(new THREE.Color(1, 1, 1), 0.45); lm.setColorAt(i, c); });
 }
 // stoompluimen van WKK-schoorstenen
 let steam;
@@ -1386,9 +1406,9 @@ scene.fog = new THREE.FogExp2(0xc9c0ae, 0.003);
 const sunDir = new THREE.Vector3();
 
 const PRESETS = {
-  morning: { elev: 7, azim: 62, turb: 9, ray: 2.2, mie: 0.02, mieG: 0.9, sun: 0xffd2a0, sunI: 3.4, hemi: 0.45, fog: 0xcdbfa6, fogD: 0.0028, exp: 0.6, env: 0.9, lamps: 0, gh: 0.0, street: 0, interior: 1.4, steam: 1.0 },
-  noon: { elev: 42, azim: -15, turb: 4, ray: 1.2, mie: 0.006, mieG: 0.8, sun: 0xfff4e6, sunI: 3.6, hemi: 0.55, fog: 0xb9c7d2, fogD: 0.0018, exp: 0.5, env: 1.0, lamps: 0, gh: 0.0, street: 0, interior: 1.2, steam: 1.0 },
-  dusk: { elev: -1.2, azim: -112, turb: 6, ray: 3.0, mie: 0.01, mieG: 0.85, sun: 0xff9a60, sunI: 0.25, hemi: 0.12, fog: 0x2a3247, fogD: 0.0026, exp: 0.95, env: 0.55, lamps: 5, gh: 0.9, street: 6, interior: 2.6, steam: 0.35 },
+  morning: { elev: 9, azim: 62, turb: 6, ray: 1.8, mie: 0.012, mieG: 0.88, sun: 0xffd6a8, sunI: 4.2, hemi: 0.28, fog: 0xd2c8b4, fogD: 0.0011, exp: 0.62, env: 0.8, lamps: 0, gh: 0.0, street: 0, interior: 1.4, steam: 1.0 },
+  noon: { elev: 42, azim: -15, turb: 3, ray: 1.0, mie: 0.005, mieG: 0.8, sun: 0xfff4e6, sunI: 4.0, hemi: 0.35, fog: 0xbfcdd8, fogD: 0.0007, exp: 0.52, env: 0.9, lamps: 0, gh: 0.0, street: 0, interior: 1.2, steam: 1.0 },
+  dusk: { elev: -1.2, azim: -112, turb: 6, ray: 3.0, mie: 0.01, mieG: 0.85, sun: 0xff9a60, sunI: 0.25, hemi: 0.12, fog: 0x2a3247, fogD: 0.0016, exp: 0.95, env: 0.55, lamps: 5, gh: 0.9, street: 6, interior: 2.6, steam: 0.35 },
 };
 let preset = 'morning';
 function applyPreset(name) {
@@ -1401,7 +1421,7 @@ function applyPreset(name) {
   scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material && o.material !== M.glass && o.material !== M.ghGlass && o.material !== M.water) o.material.envMapIntensity = P.env; });
   ghLampMat.emissiveIntensity = P.lamps; M.lamp.emissiveIntensity = P.lamps; if (neonSign) neonSign.material.emissiveIntensity = name === 'dusk' ? 2.6 : 0.12;
   M.ngRoof.emissiveIntensity = P.gh; M.ngSide.emissiveIntensity = P.gh * 0.25; M.streetlamp.emissiveIntensity = P.street;
-  M.led.emissiveIntensity = P.interior;
+  M.led.emissiveIntensity = P.interior; for (const L of interiorLights) L.intensity = L.userData.base ? L.userData.base * (name === 'dusk' ? 1.3 : 1) : (L.userData.base = L.intensity);
   if (steam) { steam.material.uniforms.uFog.value.set(P.fog); steam.material.uniforms.uDen.value = P.fogD; steam.material.uniforms.uLight.value = P.steam; }
   shadowDirty = true; bloom.enabled = name === 'dusk' || !lowGPU; bloom.strength = name === 'dusk' ? 0.75 : 0.22; bloom.threshold = name === 'dusk' ? 0.6 : 0.92;
   document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === name));
@@ -1409,14 +1429,29 @@ function applyPreset(name) {
 
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * PR, innerHeight * PR, { type: THREE.HalfFloatType, samples: lowGPU ? 0 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
+// contactschaduwen (ambient occlusion): geeft hoeken, auto's en gewassen diepte
+let gtao = null;
+if (!lowGPU) {
+  gtao = new GTAOPass(scene, camera, innerWidth * PR, innerHeight * PR);
+  gtao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.6, thickness: 1.5, scale: 1.0, samples: 12, distanceFallOff: 1.0, screenSpaceRadius: false });
+  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, radiusExponent: 1, rings: 2, samples: 12 });
+  gtao.blendIntensity = 1.0;
+  gtao.overrideVisibility = function () { const cache = this._visibilityCache; this.scene.traverse(o => { cache.set(o, o.visible); const m = o.material; if (o.isPoints || o.isLine || o === sky || (m && (m.transparent || m.alphaTest > 0))) o.visible = false; }); };
+  composer.addPass(gtao);
+}
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.55, 0.92); composer.addPass(bloom);
 const finish = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uVig: { value: 0.35 } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uVig: { value: 0.22 }, uRes: { value: new THREE.Vector2(innerWidth * PR, innerHeight * PR) }, uSharp: { value: 0.32 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uVig; varying vec2 vUv;
-    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
-    void main(){ vec2 d = vUv-0.5; vec4 c = texture2D(tDiffuse, vUv);
-      float v = 1.0 - uVig*dot(d,d)*2.2; c.rgb *= v; c.rgb += (h(vUv*1000.0+uTime)-0.5)*0.012; gl_FragColor = c; }`
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uVig, uSharp; uniform vec2 uRes; varying vec2 vUv;
+    void main(){ vec2 px = 1.0 / uRes; vec4 c = texture2D(tDiffuse, vUv);
+      // verscherpen (contrast-adaptief, werkt op lineaire HDR-waarden)
+      vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, px.y)).rgb, so = texture2D(tDiffuse, vUv - vec2(0.0, px.y)).rgb, e = texture2D(tDiffuse, vUv + vec2(px.x, 0.0)).rgb, w = texture2D(tDiffuse, vUv - vec2(px.x, 0.0)).rgb;
+      vec3 mn = min(c.rgb, min(min(n, so), min(e, w))), mx = max(c.rgb, max(max(n, so), max(e, w)));
+      vec3 amp = clamp(min(mn, 2.0 - mx) / max(mx, 1e-4), 0.0, 1.0);
+      vec3 sharp = c.rgb + (4.0 * c.rgb - n - so - e - w) * uSharp * sqrt(amp) * 0.25;
+      vec2 d = vUv - 0.5; float v = 1.0 - uVig * dot(d, d) * 2.2;
+      gl_FragColor = vec4(max(sharp, 0.0) * v, c.a); }`
 });
 composer.addPass(finish); composer.addPass(new OutputPass());
 
@@ -1537,14 +1572,42 @@ function blocked(x, y, feet, r = 0.28) {
   return false;
 }
 const joy = { x: 0, y: 0, id: null };
+let walkTarget = null;
+const ringGeo = new THREE.RingGeometry(0.2, 0.3, 40); ringGeo.rotateX(-Math.PI / 2);
+const hoverRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false })); hoverRing.visible = false; hoverRing.renderOrder = 6; scene.add(hoverRing);
+const targetRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xf2a541, transparent: true, opacity: 0.95, depthWrite: false })); targetRing.visible = false; targetRing.renderOrder = 6; scene.add(targetRing);
+const floorRc = new THREE.Raycaster(), floorNdc = new THREE.Vector2();
+function floorPick(cx, cy) {
+  const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 80;
+  const objs = buildingMeshes.filter(m => m.visible && m.material && !m.material.transparent);
+  const hit = floorRc.intersectObjects(objs, false)[0]; if (!hit) return null;
+  const n = hit.face ? hit.face.normal : null;
+  if (n && n.y > 0.6) return { x: hit.point.x, y: -hit.point.z, h: hit.point.y };
+  const back = hit.point.clone().addScaledVector(floorRc.ray.direction, -0.55); // muur aangeklikt: stop ervoor
+  return { x: back.x, y: -back.z, h: player.feet };
+}
+function setWalkTarget(p) { walkTarget = { x: p.x, y: p.y, h: p.h, best: Infinity, t: 0 }; }
 function updateWalk(dt) {
   let fx = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + (-joy.y);
   let sx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x;
   if (!pointerLocked) player.yaw += ((keys.KeyE ? 1 : 0) - (keys.KeyQ ? 1 : 0)) * dt * 1.6;
-  const len = Math.hypot(fx, sx); if (len > 1) { fx /= len; sx /= len; }
+  let len = Math.hypot(fx, sx); if (len > 1) { fx /= len; sx /= len; }
   const speed = (keys.ShiftLeft || keys.ShiftRight ? 4.6 : 2.1);
   const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-  const tvx = (fx * sy + sx * cy) * speed, tvy = (fx * cy - sx * sy) * speed, acc = Math.min(1, dt * (len > 0.05 ? 7 : 9));
+  let tvx = (fx * sy + sx * cy) * speed, tvy = (fx * cy - sx * sy) * speed;
+  // klik-om-te-lopen: vanzelf naar het aangeklikte punt, met de blik mee
+  if (len > 0.05) walkTarget = null;
+  else if (walkTarget) {
+    const ddx = walkTarget.x - player.x, ddy = walkTarget.y - player.y, d = Math.hypot(ddx, ddy);
+    if (d < 0.35) walkTarget = null;
+    else {
+      const sp = Math.min(d > 14 ? 4.4 : 2.7, d * 2.0 + 0.5); tvx = ddx / d * sp; tvy = ddy / d * sp; len = 1;
+      if (!drag) { const dyaw = Math.atan2(Math.sin(Math.atan2(ddx, ddy) - player.yaw), Math.cos(Math.atan2(ddx, ddy) - player.yaw)); player.yaw += dyaw * Math.min(1, dt * 2.4); player.pitch += (-0.06 - player.pitch) * Math.min(1, dt * 1.5); }
+      walkTarget.t += dt; if (d < walkTarget.best - 0.05) { walkTarget.best = d; walkTarget.t = 0; } else if (walkTarget.t > 0.8) walkTarget = null;
+    }
+  }
+  targetRing.visible = !!walkTarget; if (walkTarget) targetRing.position.set(walkTarget.x, walkTarget.h + 0.03, -walkTarget.y);
+  const acc = Math.min(1, dt * (len > 0.05 ? 7 : 9));
   player.mvx = (player.mvx || 0) + (tvx - (player.mvx || 0)) * acc; player.mvy = (player.mvy || 0) + (tvy - (player.mvy || 0)) * acc;
   const dx = player.mvx * dt, dy = player.mvy * dt;
   const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 0.1) || 1;
@@ -1614,7 +1677,7 @@ orbit.target.copy(W(25, 30, 2));
 let cut = 'all';
 function setCut(c, fly = true) {
   if (fly && mode === 'orbit' && c !== 'all') { camera.position.copy(W(20, -16, 42)); orbit.target.copy(W(20, 12, 0)); }
-  cut = c; CLIP[0].constant = c === 'bg' ? 2.92 : c === 'vd' ? 6.3 : 1e4;
+  cut = c; if (gtao) gtao.enabled = c === 'all'; CLIP[0].constant = c === 'bg' ? 2.92 : c === 'vd' ? 6.3 : 1e4;
   document.querySelectorAll('[data-cut]').forEach(b => b.setAttribute('aria-pressed', b.dataset.cut === c));
   renderLabels();
 }
@@ -1643,7 +1706,7 @@ function setMode(m) {
   $('#skip').hidden = m !== 'tour'; $('#caption').classList.remove('on'); $('#fade').style.opacity = 0;
   orbit.enabled = m === 'orbit'; $('#cutGrp').hidden = m !== 'orbit';
   const walk = m === 'walk';
-  $('#roomchip').hidden = !walk; $('#mapwrap').hidden = !walk; $('#gotoGrp').hidden = !walk; $('#reticle').hidden = !walk || isTouch; $('#joy').hidden = !(walk && isTouch);
+  $('#roomchip').hidden = !walk; $('#mapwrap').hidden = !walk; $('#gotoGrp').hidden = !walk; $('#reticle').hidden = true; hoverRing.visible = false; walkTarget = null; $('#joy').hidden = !(walk && isTouch);
   $('#hint').hidden = !(walk && !isTouch); $('#legend').hidden = m !== 'orbit';
   if (!walk && document.pointerLockElement) document.exitPointerLock?.();
   camera.fov = walk ? 72 : 50; camera.updateProjectionMatrix();
@@ -1659,7 +1722,7 @@ function setMode(m) {
   }
   renderLabels();
 }
-function teleport(g) { player.x = g[1]; player.y = g[2]; player.feet = g[3]; player.eyeY = g[3] + 1.68; player.vy = 0; player.yaw = THREE.MathUtils.degToRad(g[4]); player.pitch = -0.04; }
+function teleport(g) { walkTarget = null; player.x = g[1]; player.y = g[2]; player.feet = g[3]; player.eyeY = g[3] + 1.68; player.vy = 0; player.yaw = THREE.MathUtils.degToRad(g[4]); player.pitch = -0.04; }
 
 /* ---------- input ---------- */
 addEventListener('keydown', e => { keys[e.code] = true; if (mode === 'walk' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
@@ -1667,8 +1730,20 @@ addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const cv = renderer.domElement;
 function lockPointer() { try { const r = cv.requestPointerLock?.(); if (r && r.catch) r.catch(() => { }); } catch (e) { } }
-$('#hint').addEventListener('click', () => { $('#hint').hidden = true; lockPointer(); });
-cv.addEventListener('click', () => { if (mode === 'walk' && !isTouch && !pointerLocked) { $('#hint').hidden = true; lockPointer(); } });
+$('#hint').addEventListener('click', () => { $('#hint').hidden = true; });
+let downXY = null, hoverT = 0;
+cv.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
+cv.addEventListener('click', e => {
+  if (mode !== 'walk' || FB.picking) return; $('#hint').hidden = true;
+  if (downXY && Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return; // was slepen
+  const p = floorPick(e.clientX, e.clientY); if (p) setWalkTarget(p);
+});
+cv.addEventListener('pointermove', e => {
+  if (mode !== 'walk' || e.pointerType === 'touch' || e.buttons) { hoverRing.visible = false; return; }
+  const now = performance.now(); if (now - hoverT < 50) return; hoverT = now;
+  const p = floorPick(e.clientX, e.clientY); hoverRing.visible = !!p; if (p) hoverRing.position.set(p.x, p.h + 0.03, -p.y);
+});
+cv.addEventListener('pointerleave', () => { hoverRing.visible = false; });
 document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === cv; });
 document.addEventListener('mousemove', e => { if (mode === 'walk' && pointerLocked) { player.yaw += e.movementX * 0.0022; player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0022, -1.35, 1.35); } });
 // drag-to-look (no pointer lock / touch)
@@ -1877,8 +1952,8 @@ let roomKey = '', frameNo = 0;
 let prCur = PR, ftAvg = 16, adaptT = 0;
 function adaptRes(raw) {
   if (raw > 0.25) return; ftAvg += (raw * 1000 - ftAvg) * 0.06; adaptT += raw; if (adaptT < 0.8) return; adaptT = 0;
-  let n = prCur; if (ftAvg > 22 && prCur > 0.6) n = Math.max(0.6, prCur - 0.15); else if (ftAvg < 13 && prCur < PR) n = Math.min(PR, prCur + 0.1);
-  if (n !== prCur) { prCur = n; renderer.setPixelRatio(n); composer.setPixelRatio(n); }
+  let n = prCur; if (ftAvg > 27 && prCur > 0.85) n = Math.max(0.85, prCur - 0.15); else if (ftAvg < 16 && prCur < PR) n = Math.min(PR, prCur + 0.1);
+  if (n !== prCur) { prCur = n; renderer.setPixelRatio(n); composer.setPixelRatio(n); finish.uniforms.uRes.value.set(innerWidth * n, innerHeight * n); }
 }
 // gewassen: vruchttrossen alleen dichtbij tekenen, bladeren tot op afstand
 const _cp = new THREE.Vector3();
@@ -1925,7 +2000,7 @@ function frame() {
 }
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloom.resolution.set(innerWidth / 2, innerHeight / 2);
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloom.resolution.set(innerWidth / 2, innerHeight / 2); finish.uniforms.uRes.value.set(innerWidth * prCur, innerHeight * prCur);
   if (steam) steam.material.uniforms.uScale.value = innerHeight * PR;
 });
 
@@ -1939,6 +2014,9 @@ async function boot() {
   buildTextures(); buildMaterials();
   setLoad(0.3, 'Bedrijfsruimte opbouwen…'); await tick();
   buildBuilding(); buildNeon();
+  // binnenverlichting: warme plafondlampen die echt licht geven in de belangrijkste ruimtes
+  for (const [x, y, z, I, d] of [[22.5, 12, 5.6, 14, 13], [17.6, 19.5, 5.8, 12, 12], [17.9, 10, 2.8, 4, 6], [13, 10.6, 2.8, 5, 8], [35, 20, 2.8, 7, 11], [32, 20, 6.4, 12, 14], [21.8, 20, 6.4, 6, 9], [6, 18.7, 2.8, 4, 7], [27.6, 21, 2.8, 4, 7], [6.5, 12, 2.8, 4, 8], [5, 4, 5.4, 6, 10]]) {
+    const L = new THREE.PointLight(0xfff0dc, I, d, 2); L.position.copy(W(x, y, z)); scene.add(L); interiorLights.push(L); }
   setLoad(0.5, 'Kas en gewassen plaatsen…'); await tick();
   buildGreenhouse(); buildCrops();
   setLoad(0.7, 'Omgeving opbouwen…'); await tick();
@@ -1955,7 +2033,7 @@ async function boot() {
   initFeedback().catch(() => { FB.local = true; FB.items = loadLocal(); renderList(); });
 }
 boot().catch(err => { $('#ldtxt').textContent = 'Het 3D-model kon niet laden: ' + err.message + '. Probeer een recente versie van Chrome, Edge, Safari of Firefox.'; console.error(err); });
-window.__dbg = { M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
+window.__dbg = { get walkTarget() { return walkTarget; }, M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
 </script>
 </body>
 </html>
