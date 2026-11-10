@@ -50,8 +50,8 @@ body.tour .lb{transform:none}
 
 /* brand block */
 #brand{position:fixed;z-index:10;top:calc(14px + env(safe-area-inset-top,0px));left:calc(16px + env(safe-area-inset-left,0px));display:grid;gap:4px;pointer-events:none;text-shadow:0 1px 12px rgba(0,0,0,.5)}
-#brand canvas{width:138px;height:56px;display:block;background:#fff;border-radius:8px;padding:6px 8px;box-sizing:content-box;box-shadow:0 4px 18px rgba(0,0,0,.25)}
-.ld canvas{width:172px;height:70px;background:#fff;border-radius:10px;padding:8px 10px;box-sizing:content-box}
+#brand canvas{width:auto;height:46px;display:block;background:#fff;border-radius:8px;padding:6px 8px;box-sizing:content-box;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.ld canvas{width:auto;height:60px;justify-self:start;background:#fff;border-radius:10px;padding:8px 10px;box-sizing:content-box}
 #brand span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 body.tour #brand{top:calc(9vh + 14px)}
 
@@ -93,6 +93,7 @@ body.tour #dock{opacity:0;pointer-events:none}
 #hint .go{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);letter-spacing:.08em;text-transform:uppercase}
 #reticle{position:fixed;z-index:8;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:rgba(255,255,255,.75);pointer-events:none}
 #mapwrap{position:fixed;z-index:10;right:calc(16px + env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));padding:8px;display:grid;gap:6px}
+#mapwrap.fbhide{display:none}
 #mapwrap .eyebrow{display:flex;justify-content:space-between;gap:8px}
 #minimap{width:200px;height:200px;display:block;border-radius:6px;cursor:crosshair}
 #labels{position:fixed;inset:0;z-index:4;pointer-events:none}
@@ -105,12 +106,57 @@ body.tour #dock{opacity:0;pointer-events:none}
 #legend b{color:var(--ink);font-weight:600}
 @media (max-width:720px){
   #minimap{width:132px;height:132px}
-  #brand canvas{width:98px;height:40px}
+  #brand canvas{width:auto;height:32px}
   #legend{display:none}
   .lbl{display:none}
   .btn{padding:7px 9px;font-size:12px}
   #roomchip{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 }
+
+/* feedback */
+.btn.primary{background:var(--amp);color:#1a1206;font-weight:600}
+.btn.primary:hover{background:#f6b562}
+.cnt{font-family:var(--f-mono);font-size:10px;background:var(--amp);color:#1a1206;border-radius:9px;padding:1px 6px;min-width:18px;text-align:center}
+.cnt:empty{display:none}
+#fbPanel{position:fixed;z-index:14;top:calc(14px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));width:min(360px,calc(100vw - 32px));max-height:calc(100% - 110px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;background:var(--glass-2)}
+#fbPanel header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 14px 0}
+#fbPanel h2{margin:0;font-size:17px;font-stretch:112%}
+.fb-intro{margin:6px 14px 10px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.fb-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
+.fb-status{margin:0 14px 8px;font-size:12px;color:var(--ink-2)}
+.fb-status:empty{display:none}
+.fb-filter{display:flex;gap:2px;padding:0 10px 8px;border-bottom:1px solid var(--line)}
+.fb-filter .btn{padding:5px 9px;font-size:12px}
+#fbList{list-style:none;margin:0;padding:6px 8px 10px;overflow-y:auto;display:grid;gap:6px;min-height:0}
+#fbList li{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px;background:rgba(255,255,255,.02)}
+#fbList li.hl{border-color:var(--amp)}
+#fbList li.done{opacity:.6}
+.fb-top{display:flex;align-items:baseline;gap:8px;min-width:0}
+.fb-num{font-family:var(--f-mono);font-size:11px;color:#1a1206;background:var(--amp);border-radius:50%;width:20px;height:20px;display:grid;place-items:center;flex:none}
+li.done .fb-num{background:var(--leaf)}
+.fb-room{font-weight:600;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-cat{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin-left:auto;white-space:nowrap}
+.fb-text{font-size:13.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-meta{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-2)}
+.fb-row{display:flex;gap:4px;flex-wrap:wrap}
+.fb-row .btn{padding:4px 8px;font-size:12px;border-color:var(--line)}
+.fb-empty{padding:14px;font-size:13px;color:var(--ink-2);line-height:1.5}
+#fbForm{position:fixed;z-index:16;left:50%;top:50%;transform:translate(-50%,-50%);width:min(400px,calc(100vw - 32px));padding:16px;display:grid;gap:8px;background:var(--glass-2)}
+#fbForm label{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+#fbForm select,#fbForm textarea{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14px;color:var(--ink);font-family:inherit}
+#fbForm textarea{resize:vertical;min-height:84px;line-height:1.45}
+#fbForm select option{background:#141a18}
+#fbForm .row{display:flex;justify-content:flex-end;gap:6px;margin-top:4px}
+#fbWhere{font-size:15px;font-weight:600;font-stretch:110%}
+#fbPick{position:fixed;z-index:15;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:10px 14px;font-size:13px;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px)}
+body.picking #stage canvas{cursor:crosshair}
+#pins{position:fixed;inset:0;z-index:4;pointer-events:none}
+.pin{position:absolute;left:0;top:0;width:24px;height:24px;margin:-24px 0 0 -12px;pointer-events:auto;cursor:pointer;border:0;padding:0;background:none}
+.pin span{display:grid;place-items:center;width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--amp);box-shadow:0 2px 8px rgba(0,0,0,.45);border:2px solid #1a1206}
+.pin i{transform:rotate(45deg);font-style:normal;font-family:var(--f-mono);font-size:10px;font-weight:500;color:#1a1206}
+.pin.done span{background:var(--leaf)}
+.pin.new span{background:#fff}
+@media (max-width:720px){ #fbPanel{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:55%} }
 @media (prefers-reduced-motion:reduce){ .lb,#caption,#loader{transition:none} }
 </style>
 </head>
@@ -153,12 +199,34 @@ body.tour #dock{opacity:0;pointer-events:none}
     <dt>MUIS</dt><dd>Rondkijken</dd>
     <dt>SHIFT</dt><dd>Sneller lopen</dd>
     <dt>KAART</dt><dd>Klik op de plattegrond om te verplaatsen</dd>
+    <dt>F</dt><dd>Feedback plaatsen op de plek in het midden</dd>
     <dt>ESC</dt><dd>Muis weer vrijgeven</dd>
   </dl>
   <div class="go">Klik om te beginnen</div>
 </div>
 <div id="legend" class="pnl" hidden></div>
 <div id="labels"></div>
+<div id="pins"></div>
+<aside id="fbPanel" class="pnl" hidden aria-label="Feedback">
+  <header><h2>Feedback</h2><button class="btn" id="fbClose" aria-label="Feedback sluiten">✕</button></header>
+  <p class="fb-intro">Zet een opmerking op een plek in het model. Ruimte en standpunt worden meegenomen, zodat Claude weet wat er aangepast moet worden.</p>
+  <div class="fb-actions"><button class="btn primary" id="fbAdd">+ Opmerking op een plek</button><button class="btn ghost" id="fbGeneral">Algemene opmerking</button></div>
+  <div class="fb-status" id="fbStatus"></div>
+  <div class="fb-filter" role="group" aria-label="Filter"><button class="btn" data-ff="open" aria-pressed="true">Open</button><button class="btn" data-ff="done" aria-pressed="false">Verwerkt</button><button class="btn" data-ff="all" aria-pressed="false">Alles</button></div>
+  <ol id="fbList"></ol>
+</aside>
+<div id="fbPick" class="pnl" hidden><span>Klik in het model op de plek waar je opmerking over gaat.</span><button class="btn ghost" id="fbPickCancel">Annuleren</button></div>
+<form id="fbForm" class="pnl" hidden>
+  <div class="eyebrow">Nieuwe opmerking</div>
+  <div id="fbWhere"></div>
+  <label for="fbRoom">Ruimte of onderdeel</label>
+  <select id="fbRoom"></select>
+  <label for="fbCat">Soort</label>
+  <select id="fbCat"><option>Indeling / maatvoering</option><option>Gevel / dak / ramen</option><option>Materiaal / kleur</option><option>Inrichting</option><option>Kas / teelt</option><option>Buitenterrein</option><option>Overig</option></select>
+  <label for="fbText">Opmerking</label>
+  <textarea id="fbText" required maxlength="2000" placeholder="Bijv. hier moet een deur naar de kas komen, of: deze wand wordt glas"></textarea>
+  <div class="row"><button type="button" class="btn ghost" id="fbCancel">Annuleren</button><button type="submit" class="btn primary" id="fbSave">Opslaan</button></div>
+</form>
 <div id="joy" hidden><div id="joyKnob"></div></div>
 
 <nav id="dock" class="pnl" aria-label="Weergave">
@@ -188,6 +256,9 @@ body.tour #dock{opacity:0;pointer-events:none}
     <button class="btn" data-time="noon" aria-pressed="false">Middag</button>
     <button class="btn" data-time="dusk" aria-pressed="false">Avond</button>
   </div>
+  <div class="sep"></div>
+  <button class="btn" id="fbBtn" aria-expanded="false" aria-controls="fbPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Feedback<span class="cnt" id="fbCount"></span></button>
   <div class="sep"></div>
   <button class="btn" id="fsBtn" title="Volledig scherm" aria-label="Volledig scherm">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -289,6 +360,13 @@ function buildTextures() {
   T.panel = tex(p.c, 1);
   let b = pix(256, (x) => { let v = 140; if (x < 3) v = 30; else if (x % 32 === 0) v = 95; else if (x % 32 === 1) v = 170; return [v, v, v]; });
   T.panelBump = tex(b.c, 1, false);
+  T.panelR = T.panel.clone(); T.panelR.center.set(0.5, 0.5); T.panelR.rotation = Math.PI / 2; T.panelR.needsUpdate = true;
+  T.panelBumpR = T.panelBump.clone(); T.panelBumpR.center.set(0.5, 0.5); T.panelBumpR.rotation = Math.PI / 2; T.panelBumpR.needsUpdate = true;
+  // riet (dakbedekking luifel): stro in lagen
+  { const nt = tnoise(256, 64, 2, 71), nb = tnoise(256, 4, 3, 72);
+    const pt = pix(256, (x, y, i) => { const layer = (y % 64) / 64, st = nt[(y * 256 + x * 1) % 65536] * 0.6 + 0.4 * Math.sin(x * 1.7 + nt[i] * 9) * 0.5 + 0.5; const v = (0.55 + 0.45 * st) * (0.75 + 0.25 * layer) * (0.85 + nb[i] * 0.3);
+      return [190 * v, 150 * v, 92 * v]; });
+    T.thatch = tex(pt.c, 1 / 1.6); }
   // sectionaaldeur / horizontale cassettes
   p = pix(256, (x, y, i) => { const v = 226 + (n[i] - .5) * 6; return [v, v, v + 2]; });
   for (let k = 0; k < 4; k++) { p.g.fillStyle = 'rgba(90,96,100,.7)'; p.g.fillRect(0, k * 64, 256, 3); }
@@ -371,7 +449,8 @@ function defMat(key, params, opt = {}) {
 }
 function buildMaterials() {
   defMat('panel', { map: T.panel, bumpMap: T.panelBump, bumpScale: 1.2, color: 0xf0f2f3, roughness: 0.38, metalness: 0.45 });
-  defMat('roof', { map: T.panel, bumpMap: T.panelBump, bumpScale: 1.4, color: 0xe2e6e8, roughness: 0.32, metalness: 0.55, side: THREE.DoubleSide });
+  defMat('thatch', { map: T.thatch, color: 0xd9c49a, roughness: 1, side: THREE.DoubleSide });
+  defMat('roof', { map: T.panelR, bumpMap: T.panelBumpR, bumpScale: 1.4, color: 0xe2e6e8, roughness: 0.32, metalness: 0.55, side: THREE.DoubleSide });
   defMat('sect', { map: T.sect, color: 0xe9ecee, roughness: 0.4, metalness: 0.4 });
   defMat('trim', { color: 0x2c3134, roughness: 0.45, metalness: 0.6 });
   defMat('plaster', { color: 0xf1f0ec, roughness: 0.9 });
@@ -623,7 +702,8 @@ function pendant(x0, y0, x1, y1, z) { // linear pendant luminaire
 
 /* ---------- Axia-logo: origineel bestand indien aanwezig (axia-logo.png), anders vector-nabouw ---------- */
 let logoImg = null;
-const LOGO_W = 1064, LOGO_H = 432, LOGO_BLUE = '#0b4a8b', LOGO_GREEN = '#1fa23b';
+const LOGO_SRC = 'data:image/png;base64,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';
+let LOGO_W = 1064, LOGO_H = 432; const LOGO_BLUE = '#0b4a8b', LOGO_GREEN = '#1fa23b';
 function drawLogo(g, x, y, H, opt = {}) {
   const k = H / LOGO_H;
   if (logoImg) { g.drawImage(logoImg, x, y, LOGO_W * k, H); return LOGO_W * k; }
@@ -642,7 +722,7 @@ function drawLogo(g, x, y, H, opt = {}) {
   }
   g.restore(); return LOGO_W * k;
 }
-function paintLogoCanvas(id) { const c = document.getElementById(id); if (!c) return; const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); drawLogo(g, 0, 0, c.height); }
+function paintLogoCanvas(id) { const c = document.getElementById(id); if (!c) return; c.width = Math.round(c.height * LOGO_W / LOGO_H); const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); drawLogo(g, 0, 0, c.height); }
 
 /* ---------- screens & signage (own UVs) ---------- */
 function canvasPlane(w, h, draw, pos, rotY, opts = {}) {
@@ -666,11 +746,20 @@ function drawScreen(title, sub) {
 /* ==========================================================================
    BUILDING — afgeleid van tekening 218300-B (begane grond rev2 + verdieping)
    ========================================================================== */
-const EAVE = 7.0, RIDGE = 8.6, ST = 0.25, PT = 0.12, CEIL = 3.0, FL1 = 3.2;
-const rows = [ // dakbeuken (nok evenwijdig aan stramien A–D)
-  { y0: 0, y1: 8, x0: 0, x1: 10.3 },
-  { y0: 8, y1: 16, x0: 0, x1: 25 },
-  { y0: 16, y1: 24, x0: 0, x1: 40 }];
+const EAVE = 7.0, RIDGE = 9.0, ST = 0.25, PT = 0.12, CEIL = 3.0, FL1 = 3.2;
+// drie bouwvolumes, nok van voor naar achter (zoals op de dronefoto's); het lage volume A steekt het verst naar de weg
+const VOLS = [
+  { n: 'A', x0: 0, x1: 10.3, y0: 0, y1: 24, e: 6.2, r: 7.8 },
+  { n: 'B', x0: 10.3, x1: 25, y0: 8, y1: 24, e: 7.0, r: 9.0 },
+  { n: 'C', x0: 25, x1: 40, y0: 16, y1: 24, e: 7.0, r: 9.0 }];
+const VA = VOLS[0], VB = VOLS[1], VC = VOLS[2];
+const roofZ = (v, x) => { const xm = (v.x0 + v.x1) / 2, hw = (v.x1 - v.x0) / 2; return v.e + (v.r - v.e) * Math.max(0, 1 - Math.abs(x - xm) / hw); };
+// wandvulling tot onder het dak (topgevel) op plan-y = yp, tussen x0 en x1, vanaf zb
+function profileWall(key, yp, x0, x1, zb, t, v) {
+  const xm = (v.x0 + v.x1) / 2, s2 = new THREE.Shape(); s2.moveTo(x0, zb); s2.lineTo(x1, zb); s2.lineTo(x1, roofZ(v, x1));
+  if (xm > x0 && xm < x1) s2.lineTo(xm, v.r); s2.lineTo(x0, roofZ(v, x0)); s2.closePath();
+  const g = new THREE.ExtrudeGeometry(s2, { depth: t, bevelEnabled: false }); g.translate(0, 0, -yp - t / 2); addGeo(key, g);
+}
 
 function buildBuilding() {
   // --- vloeren
@@ -680,46 +769,44 @@ function buildBuilding() {
   fl('tile', 8.6, 16, 11.8, 21.4); fl('tile', 10.2, 13.3, 16, 16.1); fl('tile', 11.8, 16.1, 16, 21.4); fl('tile', 19.9, 19.2, 23.8, 21.4);
   fl('stone', 16, 8, 19.8, 11.8);
 
-  // --- gevel (sandwichpanelen) ; ops = [a,b,z0,z1,type]
+  // --- gevels (sandwichpanelen) ; ops = [a,b,z0,z1,type]
   const ext = { ext: true };
-  wall('panel', 0, 0, 10.3, 0, 0, EAVE, ST, [[3.2, 7.2, 1.1, 2.4, 'win']], ext);                             // kopse kant container
-  wall('panel', 10.3, 0, 10.3, 8, 0, EAVE, ST, [[0.25, 3.75, 0, 4.2, 'sect'], [4.25, 7.75, 0, 4.2, 'sect']], ext); // 2 overheaddeuren
-  wall('panel', 10.3, 8, 25, 8, 0, EAVE, ST, [
+  wall('panel', 0, 0, 10.3, 0, 0, VA.e, ST, [[3.2, 7.2, 0.9, 2.2, 'win']], ext); profileWall('panel', 0, -0.05, 10.35, VA.e - 0.01, ST, VA);   // kopgevel A (weg)
+  wall('panel', 10.3, 0, 10.3, 8, 0, VA.e, ST, [[0.25, 3.75, 0, 4.2, 'sect'], [4.25, 7.75, 0, 4.2, 'sect']], ext); // 2 overheaddeuren
+  wall('panel', 10.3, 8, 10.3, 24, VA.e, VB.e, ST, [], { plan: false });
+  wall('panel', 10.3, 8, 25, 8, 0, VB.e, ST, [
     [10.8, 15.6, 0.9, 2.6, 'win'],                        // kantine
     [16.1, 17.0, 0.05, 2.9, 'win'], [17.0, 18.8, 0, 2.6, 'auto'], [18.8, 19.7, 0.05, 2.9, 'win'], // entree
-    [16.1, 19.7, 3.4, 6.4, 'win'],                        // vide boven entree
-    [20.2, 24.8, 0.05, 6.4, 'win']                        // ontvangstruimte, dubbelhoog
-  ], ext);
-  wall('panel', 25, 8, 25, 16, 0, EAVE, ST, [[8.6, 15.4, 0.05, 6.2, 'win']], ext);                         // glas naar kas
-  wall('panel', 25, 16, 40, 16, 0, EAVE, ST, [[31.0, 39.2, 0.9, 2.7, 'win'], [26.3, 29.3, 4.0, 6.3, 'win'], [31.4, 34.4, 4.0, 6.3, 'win'], [36.0, 39.0, 4.0, 6.3, 'win']], ext); // ramen A
-  wall('panel', 40, 16, 40, 24, 0, EAVE, ST, [[16.3, 17.7, 0, 2.5, 'auto'], [18.0, 22.6, 0.3, 2.8, 'win'], [17.2, 19.6, 4.0, 6.3, 'win'], [20.3, 22.4, 4.0, 6.3, 'win'], [22.95, 23.9, FL1, 5.4, 'door']], ext);
-  wall('panel', 0, 24, 40, 24, 0, EAVE, ST, [[12.9, 14.9, 0, 2.6, 'auto'], [25.4, 26.4, 0, 2.3, 'door'], [30.4, 31.4, 0, 2.3, 'door']], ext);
-  wall('panel', 0, 0, 0, 24, 0, EAVE, ST, [[4.6, 7.4, 1.2, 2.6, 'win'], [10.5, 15.5, 0.9, 2.6, 'win'], [18.0, 23.0, 0.9, 2.6, 'win'], [8.6, 9.6, 0, 2.3, 'door']], ext);
+    [16.1, 19.7, 3.6, 6.6, 'win'],                        // vide boven entree
+    [20.2, 24.8, 0.05, 6.6, 'win']                        // ontvangstruimte, dubbelhoog
+  ], ext); profileWall('panel', 8, 10.25, 25.05, VB.e - 0.01, ST, VB);
+  wall('panel', 25, 8, 25, 16, 0, VB.e, ST, [[8.6, 15.4, 0.05, 6.2, 'win']], ext);
+  wall('panel', 25, 16, 40, 16, 0, VC.e, ST, [[31.0, 39.2, 0.9, 2.7, 'win'], [26.3, 29.3, 4.0, 6.3, 'win'], [31.4, 34.4, 4.0, 6.3, 'win'], [36.0, 39.0, 4.0, 6.3, 'win']], ext); // ramen A
+  profileWall('panel', 16, 24.95, 40.05, VC.e - 0.01, ST, VC);
+  wall('panel', 40, 16, 40, 24, 0, VC.e, ST, [[16.3, 17.7, 0, 2.5, 'auto'], [18.0, 22.6, 0.3, 2.8, 'win'], [17.2, 19.6, 4.0, 6.3, 'win'], [20.3, 22.4, 4.0, 6.3, 'win'], [22.95, 23.9, FL1, 5.4, 'door']], ext);
+  wall('panel', 0, 24, 10.3, 24, 0, VA.e, ST, [], ext); wall('panel', 10.3, 24, 25, 24, 0, VB.e, ST, [[12.9, 14.9, 0, 2.6, 'auto']], ext); wall('panel', 25, 24, 40, 24, 0, VC.e, ST, [[25.4, 26.4, 0, 2.3, 'door'], [30.4, 31.4, 0, 2.3, 'door']], ext);
+  for (const v of VOLS) profileWall('panel', 24, v.x0, v.x1, v.e - 0.01, ST, v);
+  wall('panel', 0, 0, 0, 24, 0, VA.e, ST, [[4.6, 7.4, 1.2, 2.6, 'win'], [10.5, 15.5, 0.9, 2.6, 'win'], [18.0, 23.0, 0.9, 2.6, 'win'], [8.6, 9.6, 0, 2.3, 'door']], ext);
   // plint
-  box('trim', -0.14, -0.14, 0, 10.44, 0, 0.35); box('trim', 10.3, -0.14, 0, 10.44, 0.2, 0.35); box('trim', 10.3, 7.86, 0, 16.0, 8.14, 0.35);
-  box('trim', -0.14, 0, 0, 0, 24, 0.35);
-  // gevelbeplating tussen beuken (afscheidingswand goederen)
-  wall('panel', 0, 8, 10.3, 8, 0, EAVE, 0.2, [[1.2, 2.2, 0, 2.4, 'door']]);
-  // topgevels
-  for (const r of rows) { gableX('panel', 0, r.y0, r.y1, EAVE, RIDGE, ST); gableX('panel', r.x1, r.y0, r.y1, EAVE, RIDGE, ST); }
-  gableX('plaster', 19.6, 16, 24, EAVE, RIDGE - 0.15, PT); gableX('plaster', 24.85, 16, 24, EAVE, RIDGE - 0.15, PT);
+  box('trim', -0.14, -0.14, 0, 10.44, 0, 0.35); box('trim', 10.3, -0.14, 0, 10.44, 8, 0.35); box('trim', 10.3, 7.86, 0, 16.0, 8.14, 0.35);
+  box('trim', -0.14, 0, 0, 0, 24, 0.35); box('trim', 25, 15.86, 0, 31, 16.14, 0.35);
+  // afscheidingswand goederen / techn. dienst
+  wall('panel', 0, 8, 10.3, 8, 0, VA.e, 0.2, [[1.2, 2.2, 0, 2.4, 'door']]); profileWall('plaster', 8, 0, 10.3, VA.e - 0.01, 0.2, VA);
 
-  // --- daken (zadeldaken per beuk) + kantplanken + goten
-  for (const r of rows) {
-    const ym = (r.y0 + r.y1) / 2, xa = r.x0 - 0.2, xb = r.x1 + 0.2, xc = (xa + xb) / 2;
-    beam('roof', W(xc, r.y0 - 0.08, EAVE + 0.06), W(xc, ym, RIDGE + 0.09), xb - xa, 0.16);
-    beam('roof', W(xc, ym, RIDGE + 0.09), W(xc, r.y1 + 0.08, EAVE + 0.06), xb - xa, 0.16);
-    box('trim', xa, ym - 0.2, RIDGE + 0.1, xb, ym + 0.2, RIDGE + 0.22); // nokafdekking
-    for (const xg of [xa, xb]) { beam('trim', W(xg, r.y0 - 0.1, EAVE + 0.02), W(xg, ym, RIDGE + 0.12), 0.06, 0.32); beam('trim', W(xg, ym, RIDGE + 0.12), W(xg, r.y1 + 0.1, EAVE + 0.02), 0.06, 0.32); }
-    // spanten
-    for (let x = 5; x < r.x1 - 0.5; x += 5) { beam('steel', W(x, r.y0 + 0.15, EAVE - 0.25), W(x, ym, RIDGE - 0.25), 0.14, 0.32); beam('steel', W(x, ym, RIDGE - 0.25), W(x, r.y1 - 0.15, EAVE - 0.25), 0.14, 0.32); }
+  // --- daken: zadeldaken met nok van voor naar achter + kantplanken + goten
+  for (const v of VOLS) {
+    const xm = (v.x0 + v.x1) / 2, ya = v.y0 - 0.2, yb = v.y1 + 0.2, yc = (ya + yb) / 2;
+    beam('roof', W(v.x0 - 0.12, yc, v.e + 0.06), W(xm, yc, v.r + 0.09), yb - ya, 0.16);
+    beam('roof', W(xm, yc, v.r + 0.09), W(v.x1 + 0.12, yc, v.e + 0.06), yb - ya, 0.16);
+    box('trim', xm - 0.2, ya, v.r + 0.1, xm + 0.2, yb, v.r + 0.22); // nokafdekking
+    for (const yg of [ya, yb]) { beam('trim', W(v.x0 - 0.14, yg, v.e + 0.02), W(xm, yg, v.r + 0.12), 0.32, 0.06); beam('trim', W(xm, yg, v.r + 0.12), W(v.x1 + 0.14, yg, v.e + 0.02), 0.32, 0.06); }
+    for (let y = v.y0 + 4; y < v.y1 - 0.5; y += 4) { beam('steel', W(v.x0 + 0.15, y, v.e - 0.25), W(xm, y, v.r - 0.25), 0.32, 0.14); beam('steel', W(xm, y, v.r - 0.25), W(v.x1 - 0.15, y, v.e - 0.25), 0.32, 0.14); }
   }
-  box('trim', -0.2, -0.3, EAVE - 0.25, 10.5, 0.05, EAVE + 0.1); box('trim', 10.3, 7.7, EAVE - 0.25, 25.2, 8.05, EAVE + 0.1);
-  box('trim', 25, 15.7, EAVE - 0.25, 40.2, 16.05, EAVE + 0.1); box('trim', -0.2, 23.95, EAVE - 0.25, 40.2, 24.3, EAVE + 0.1);
-  box('alu', 0, 7.75, EAVE - 0.05, 10.3, 8.25, EAVE + 0.05); box('alu', 0, 15.75, EAVE - 0.05, 25, 16.25, EAVE + 0.05); // kilgoten
-  // kolommen & randliggers in het hart
-  for (const [x, y] of [[5, 16], [10, 16], [15, 16], [25, 16], [5, 8], [10, 8]]) box('steel', x - 0.12, y - 0.12, 0, x + 0.12, y + 0.12, EAVE, { col: true });
-  box('steel', 0, 15.85, EAVE - 0.45, 25, 16.15, EAVE - 0.05);
+  box('trim', -0.32, -0.2, VA.e - 0.25, 0.02, 24.2, VA.e + 0.1); box('trim', 10.28, -0.2, VA.e - 0.25, 10.62, 8, VA.e + 0.1);
+  box('trim', 24.98, 8 - 0.2, VB.e - 0.25, 25.32, 16, VB.e + 0.1); box('trim', 39.98, 16 - 0.2, VC.e - 0.25, 40.32, 24.2, VC.e + 0.1);
+  box('alu', 10.05, 8, VA.e + 0.0, 10.45, 24, VA.e + 0.12); box('alu', 24.75, 16, VB.e - 0.02, 25.25, 24, VB.e + 0.08); // kilgoten
+  for (const [x, y] of [[10.3, 12], [10.3, 16.05], [10.3, 20], [25.05, 20]]) box('steel', x - 0.12, y - 0.12, 0, x + 0.12, y + 0.12, x < 11 ? VA.e : VB.e, { col: true });
+  box('steel', 10.15, 8, VA.e - 0.4, 10.45, 24, VA.e - 0.02); box('steel', 24.9, 16, VB.e - 0.4, 25.2, 24, VB.e - 0.02);
 
   // --- verdiepingsvloeren (+3200): opslag 0.20 en vloer 1.01/1.02 + bordes
   const slab = (x0, y0, x1, y1) => { box('concrete', x0, y0, CEIL + 0.02, x1, y1, FL1, { walk: true }); box('ceil', x0, y0, CEIL, x1, y1, CEIL + 0.02); };
@@ -762,9 +849,9 @@ function buildBuilding() {
   planLines.push({ hor: false, A: ys, B: ye, c: 18.12, ops: [], lvl: 0, glass: true, rail: true });
 
   // --- verdieping: 1.01, Presentatieruimte 1.02, opslag 0.20
-  wall('plaster', 19.6, 16, 19.6, 24, FL1, EAVE, PT, [[22.2, 23.2, FL1, 5.5, 'door']], { lvl: 1 });  // K
-  wall('plaster', 24.85, 16, 24.85, 24, FL1, EAVE, PT, [[22.1, 23.1, FL1, 5.5, 'door']], { lvl: 1 }); // I
-  glassWall(19.6, 16, 24.85, 16, FL1, EAVE - 0.05, [], 1);                                            // L
+  wall('plaster', 19.6, 16, 19.6, 24, FL1, roofZ(VB, 19.6) - 0.06, PT, [[22.2, 23.2, FL1, 5.5, 'door']], { lvl: 1 });  // K
+  wall('plaster', 24.85, 16, 24.85, 24, FL1, roofZ(VB, 24.85) - 0.04, PT, [[22.1, 23.1, FL1, 5.5, 'door']], { lvl: 1 }); // I
+  glassWall(19.6, 16, 24.85, 16, FL1, EAVE - 0.05, [], 1); profileWall('plaster', 16, 19.6, 24.85, EAVE - 0.05, PT, VB);                                            // L
   rail(18.0, 21.6, 18.0, 24, FL1);
   rail(3.3, 8.1, 3.3, 21.4, FL1, 1.1, 'mesh'); rail(3.3, 21.4, 10.0, 21.4, FL1, 1.1, 'mesh'); rail(11.5, 21.4, 16, 21.4, FL1, 1.1, 'mesh'); rail(16, 8.1, 16, 21.4, FL1, 1.1, 'mesh');
   box('mesh', 10.0, 21.39, FL1, 11.5, 21.41, FL1 + 1.1); // hekwerk te openen
@@ -833,17 +920,34 @@ function buildBuilding() {
   // Opslagruimte 0.20 (verdieping)
   rack(4.0, 9.0, 15.0, 10.0, 2.6, 2, FL1); rack(4.0, 12.5, 15.0, 13.5, 2.6, 2, FL1); rack(4.0, 16.0, 15.0, 17.0, 2.6, 2, FL1); rack(4.0, 19.5, 9.5, 20.5, 2.6, 2, FL1);
 
-  // --- buitenzijde entree: luifel, belettering
-  box('trim', 15.6, 6.2, 3.25, 20.2, 8, 3.45); box('led', 15.8, 6.4, 3.24, 20.0, 6.5, 3.25);
-  for (const x of [15.8, 20.0]) box('steel', x - 0.06, 6.3, 0, x + 0.06, 6.42, 3.25, { col: true });
-  canvasPlane(2.3 * LOGO_W / LOGO_H, 2.3, (g, w, h) => { g.clearRect(0, 0, w, h); drawLogo(g, 0, 0, h, { bg: '#d7dadc' }); }, W(13.2, 7.86, 5.05), 0, { transparent: true });
+  // --- entree: puntig luifeldak met riet op eiken staanders
+  for (const [x, y] of [[15.7, 3.6], [20.1, 3.6]]) box('oak', x - 0.1, y - 0.1, 0, x + 0.1, y + 0.1, 3.05, { col: true });
+  box('oak', 15.6, 3.5, 2.86, 20.2, 8, 3.05); box('oak', 15.6, 3.5, 2.86, 15.8, 8, 3.05); box('oak', 20.0, 3.5, 2.86, 20.2, 8, 3.05);
+  { const cone = new THREE.ConeGeometry(1, 1, 4, 1, false); cone.rotateY(Math.PI / 4); cone.scale(6.2 / Math.SQRT2, 3.6, 5.6 / Math.SQRT2); cone.translate(17.9, 3.0 + 1.8, -5.6); addGeo('thatch', cone);
+    const cap = new THREE.ConeGeometry(1, 1, 4, 1, false); cap.rotateY(Math.PI / 4); cap.scale(0.5 / Math.SQRT2, 0.5, 0.5 / Math.SQRT2); cap.translate(17.9, 6.45, -5.6); addGeo('trim', cap); }
+  box('oak', 15.0, 2.9, 2.84, 20.8, 8.0, 2.86); box('led', 17.6, 5.3, 2.83, 18.2, 5.9, 2.84);
+}
+
+// neonlogo op de kopgevel van volume A (aan de weg); licht 's avonds op
+let neonSign = null;
+function buildNeon() {
+  const c = document.createElement('canvas'); c.width = 2048; c.height = Math.round(2048 * LOGO_H / LOGO_W); const g = c.getContext('2d'); drawLogo(g, 0, 0, c.height);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANI;
+  const m = new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.15, transparent: true, roughness: 0.3, depthWrite: false });
+  m.clippingPlanes = CLIP;
+  const w = 8.2, h = w * LOGO_H / LOGO_W;
+  neonSign = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); neonSign.position.copy(W(5.15, -0.16, 2.55 + h / 2)); neonSign.renderOrder = 4; scene.add(neonSign);
+  // achterplaat (afstandhouders) voor diepte
+  box('trim', 5.15 - w / 2 + 0.1, -0.15, 2.5, 5.15 + w / 2 - 0.1, -0.13, 2.53);
 }
 
 /* ==========================================================================
    KAS — Venlo, poot 6,5 m, kap 5 m
    ========================================================================== */
 const GUT = 6.5, GRID = 7.45, SPAN = 5;
-const ghRegions = [{ x0: -20, x1: 110, y0: 24, y1: 80 }, { x0: 25, x1: 110, y0: -35, y1: 16 }, { x0: 40, x1: 110, y0: 16, y1: 24 }];
+// kas achter de bedrijfsruimte (loopt naar achteren), met een strook naast volume C tot aan de voorgevel
+const GH = { x0: 0, x1: 55, y0: 24, y1: 124 };
+const ghRegions = [{ x0: 0, x1: 55, y0: 24, y1: 124 }, { x0: 40, x1: 55, y0: 16, y1: 24 }];
 const instanced = [];
 function inst(geo, mat, n, cast = false) { const m = new THREE.InstancedMesh(geo, mat, n); m.castShadow = cast; m.receiveShadow = true; scene.add(m); instanced.push(m); return m; }
 const ghLampMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xffb050, emissiveIntensity: 0, roughness: 0.5 });
@@ -862,7 +966,7 @@ function buildGreenhouse() {
       for (let y = R.y0 + 2; y < R.y1 - 1; y += 3.2) for (const lx of [x + 1.25, x + 3.75]) lamps.push([lx, y]);
       for (let y = R.y0; y <= R.y1 + 0.01; y += 5) {
         const onEdge = (Math.abs(y - R.y0) < .01 || Math.abs(y - R.y1) < .01);
-        if (!(x > -0.5 && x < 40.5 && y > 15.9 && y < 24.1) && !(x === 25 && y <= 16 && y >= 8))
+        if (!(x > -0.5 && x < 40.5 && y > -0.1 && y < 24.1))
           box('alu', x - 0.05, y - 0.05, 0, x + 0.05, y + 0.05, GUT - 0.15, { col: true });
         if (!onEdge || true) { box('alu', x, y - 0.03, GUT - 0.65, x + SPAN, y + 0.03, GUT - 0.6); box('alu', x, y - 0.03, GUT - 0.2, x + SPAN, y + 0.03, GUT - 0.15); }
       }
@@ -894,13 +998,13 @@ function buildGreenhouse() {
     for (let a = A + 1.25; a < B; a += 1.25) if (!doors.some(d => a > d[0] - 0.1 && a < d[1] + 0.1)) { if (hor) box('alu', a - 0.02, c - 0.03, 0.6, a + 0.02, c + 0.03, GUT); else box('alu', c - 0.03, a - 0.02, 0.6, c + 0.03, a + 0.02, GUT); }
     planLines.push({ hor, A, B, c, ops: doors.map(d => [d[0], d[1], 0, 3, 'open']), lvl: 0, glass: true, gh: true });
   };
-  side(-20, 24, -20, 80); side(-20, 80, 110, 80); side(110, -35, 110, 80); side(-20, 24, 0, 24, [[-8, -6]]); side(25, -35, 25, 8, [[-2.5, -0.5]]); side(25, -35, 110, -35);
-  for (const [y, xa, xb] of [[80, -20, 110], [24, -20, 40], [-35, 25, 110], [16, 25, 40]]) for (let x = xa; x < xb - 0.01; x += SPAN) poly('ghGlass', [W(x, y, GUT), W(x + SPAN, y, GUT), W(x + SPAN / 2, y, GRID)]);
+  side(0, 24, 0, 124, [[60, 62]]); side(0, 124, 55, 124); side(55, 16, 55, 124, [[90, 92]]); side(40, 16, 55, 16, [[47, 49]]);
+  for (const [y, xa, xb] of [[124, 0, 55], [16, 40, 55]]) for (let x = xa; x < xb - 0.01; x += SPAN) poly('ghGlass', [W(x, y, GUT), W(x + SPAN, y, GUT), W(x + SPAN / 2, y, GRID)]);
   // vloeren: paden beton, teelt op witte folie
-  box('concrete', -20, 24, -0.2, 110, 29, 0.0, {}); box('foil', -20, 29, -0.05, 110, 80, 0.003);
-  box('concrete', 25, 11, -0.2, 110, 16, 0.0); box('foil', 25, -35, -0.05, 110, 11, 0.003); box('concrete', 40, 16, -0.2, 110, 24, 0.0);
-  // proeftafels in strook G3
-  for (let x = 47; x < 106; x += 4.2) { box('alu', x, 17.2, 0.7, x + 3.0, 22.8, 0.78, { col: true }); for (let xx = x + 0.2; xx < x + 2.9; xx += 0.42) for (let yy = 17.5; yy < 22.6; yy += 0.42) plantSpots.push([xx, yy, 0.78, 0.33, 'tray']); }
+  box('concrete', 0, 24, -0.2, 55, 29, 0.0, {}); box('concrete', 0, 74, -0.2, 55, 77, 0.0); box('foil', 0, 29, -0.05, 55, 74, 0.003); box('foil', 0, 77, -0.05, 55, 124, 0.003);
+  box('concrete', 40, 16, -0.2, 55, 24, 0.0);
+  // proeftafels met jonge tomatenplanten in de strook naast volume C
+  for (const x of [47, 51.3]) { box('alu', x, 17.0, 0.7, x + 3.0, 22.6, 0.78, { col: true }); for (let xx = x + 0.2; xx < x + 2.9; xx += 0.42) for (let yy = 17.3; yy < 22.4; yy += 0.42) plantSpots.push([xx, yy, 0.78, 0.33, 'tray']); }
 }
 // gewassen: tomaten aan de hoge draad, per vak een ander ras
 const TOMATO = [ // kleur, vruchtgrootte (m), tros-type
@@ -918,7 +1022,7 @@ function buildCrops() {
   const dens = lowGPU ? 0.8 : 0.6;
   // één plant = steel + drie bladpakketten (onderste blad is weggeplukt, zoals bij tomaat gebruikelijk)
   const stem = new THREE.CylinderGeometry(0.012, 0.014, 2.9, 4, 1, true).toNonIndexed(); stem.translate(0, 0.6 + 1.45, 0); stem.deleteAttribute('uv');
-  const plantGeo = mergeGeometries([stem, sphereGeo(0.34, 0.07, 1.55, 0.05, 0.85, 0.85, 1.6), sphereGeo(0.34, -0.08, 1.98, -0.06, 0.85, 0.9, 1.55), sphereGeo(0.33, 0.06, 2.4, 0.04, 0.8, 0.9, 1.6), sphereGeo(0.3, -0.06, 2.8, -0.05, 0.8, 0.85, 1.55), sphereGeo(0.25, 0.03, 3.18, 0.02, 0.75, 0.9, 1.4)].map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
+  const plantGeo = mergeGeometries([stem, sphereGeo(0.34, 0.05, 1.55, 0.05, 0.72, 0.85, 1.6), sphereGeo(0.34, -0.05, 1.98, -0.06, 0.72, 0.9, 1.55), sphereGeo(0.33, 0.04, 2.4, 0.04, 0.7, 0.9, 1.6), sphereGeo(0.3, -0.06, 2.8, -0.05, 0.8, 0.85, 1.55), sphereGeo(0.25, 0.03, 3.18, 0.02, 0.75, 0.9, 1.4)].map(g => { if (g.attributes.uv) g.deleteAttribute('uv'); return g; }));
   const truss = (cherry, r) => {
     const parts = [], n = cherry ? 10 : 6;
     for (const [side, z0] of [[1, 1.35], [-1, 0.95], [1, 0.62]]) for (let k = 0; k < n; k++) { const t = k / (n - 1); parts.push(sphereGeo(r, side * (0.12 + t * 0.12) + (k % 2 ? 0.03 : -0.03) * (cherry ? 1 : 0.6), z0 - t * (cherry ? 0.22 : 0.3), (k % 2 ? 0.035 : -0.035))); }
@@ -954,8 +1058,8 @@ function buildCrops() {
       cropChunks.push({ x0: bx, x1: bx + 9.6, y0, y1, leaves: lm, fruit: tm, variety: V.n });
     }
   };
-  zone(-20, 110, 29.5, 79.5);
-  zone(25, 110, -34.5, 10.5);
+  zone(0, 55, 29.5, 73.5);
+  zone(0, 55, 77.5, 123.5);
   const pm = inst(new THREE.CylinderGeometry(0.026, 0.026, 1, 6), M.alu, pipes.length * 2, false);
   pipes.forEach(([x, y0, y1], i) => { for (const s2 of [-1, 1]) { mtx.compose(new THREE.Vector3(x + s2 * 0.28, 0.16, -(y0 + y1) / 2), new THREE.Quaternion().setFromAxisAngle(_upX, Math.PI / 2), new THREE.Vector3(1, y1 - y0, 1)); pm.setMatrixAt(i * 2 + (s2 > 0 ? 1 : 0), mtx); } });
   // potplanten & jonge tomatenplanten in trays
@@ -994,74 +1098,127 @@ function buildSite() {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.3; ground.receiveShadow = true;
   const uv = ground.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2400, uv.getY(i) * 2400); scene.add(ground);
   const flat = (k, x0, y0, x1, y1, z = 0) => box(k, x0, y0, z - 0.02, x1, y1, z);
-  flat('asphalt', -12, -21, 25, 0); flat('asphalt', -12, 0, 0, 24); flat('asphalt', 12, -39, 20, -21); flat('asphalt', -50, 24, -20, 32); flat('asphalt', 10.3, 0, 25, 2);
-  flat('paving', 10.3, 2, 25, 8, 0.012); flat('paving', 15.0, -3, 20.8, 2, 0.012); flat('paving', -20, 24, -12, 30, 0.012); flat('asphalt', -12, 24, -20, 30);
-  flat('asphalt', -500, -45, 500, -39);
-  for (let x = -495; x < 500; x += 9) flat('paint', x, -42.07, x + 4.5, -41.93, 0.012);
-  flat('paint', -500, -44.6, 500, -44.45, 0.012); flat('paint', -500, -39.55, 500, -39.4, 0.012);
-  // parkeervakken
+  const paintX = (x0, x1, y, dash = 0) => { if (!dash) flat('paint', x0, y - 0.07, x1, y + 0.07, 0.012); else for (let x = x0; x < x1; x += dash * 2) flat('paint', x, y - 0.07, Math.min(x1, x + dash), y + 0.07, 0.012); };
+  const paintY = (y0, y1, x, dash = 0) => { if (!dash) flat('paint', x - 0.07, y0, x + 0.07, y1, 0.012); else for (let y = y0; y < y1; y += dash * 2) flat('paint', x - 0.07, y, x + 0.07, Math.min(y1, y + dash), 0.012); };
+
+  // Hoge Noordweg: langs de voorkant, buigt bij de sloot af naar achteren
+  flat('asphalt', -400, -27, 96, -21); flat('asphalt', 90, -27, 97, 320);
+  paintX(-400, 88, -24, 3); paintY(-18, 320, 93.5, 3);
+  // weg tussen de kassen door (tussen het buurperceel en de nieuwbouw), naar achteren
+  flat('asphalt', -9.5, -21, -1.2, 420); paintY(-18, 420, -5.35, 3); paintY(-21, 420, -9.2); paintY(-21, 420, -1.5); box('grass', -1.2, -17, 0, 0, 420, 0.05);
+  // parkeerplein P (voor en rechts van het gebouw) + inrit
+  flat('asphalt', 10.3, -17, 56, 8); flat('asphalt', 25, 8, 56, 16); flat('asphalt', 43, -21, 51, -17);
+  flat('paving', 14.6, -3, 21.2, 8, 0.012); flat('paving', 40.2, 13, 55, 16, 0.012);
+  box('grass', 0, -17, 0, 10.3, -0.3, 0.05); box('grass', 21.6, -2.6, 0, 24.8, 0.4, 0.06); box('grass', 10.6, -2.6, 0, 14.2, 0.4, 0.06);
   const bays = [];
-  for (let x = 10.6; x < 15.6; x += 2.6) bays.push([x, -9, x + 2.5, -3.5, 'n']);
-  for (let x = 20.6; x < 25; x += 2.6) bays.push([x, -9, x + 2.5, -3.5, 'n']);
-  for (let x = 1.6; x < 9.5; x += 2.6) bays.push([x, -20.5, x + 2.5, -15, 's']);
-  for (let x = 20.6; x < 24.5; x += 2.6) bays.push([x, -20.5, x + 2.5, -15, 's']);
-  for (let y = 2; y < 22; y += 2.6) bays.push([-11.5, y, -6, y + 2.5, 'e']);
-  for (const [x0, y0, x1, y1] of bays) { if (x1 - x0 < y1 - y0) { flat('paint', x0, y0, x0 + 0.1, y1, 0.012); flat('paint', x1, y0, x1 + 0.1, y1, 0.012); } else { flat('paint', x0, y0, x1, y0 + 0.1, 0.012); flat('paint', x0, y1, x1, y1 + 0.1, 0.012); } }
-  buildCars(bays.filter(() => rnd() < 0.7));
-  // sloten
-  water = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), M.water);
-  const waters = [[-500, -53, 500, -48], [116, -37, 122, 400], [-26, 34, -23, 400]];
-  for (const [x0, y0, x1, y1] of waters) { box('water', x0, y0, 0.0, x1, y1, 0.012); box('grass', x0 - 0.6, y0 - 0.6, -0.02, x1 + 0.6, y1 + 0.6, 0.006); }
-  for (const [x0, y0, x1, y1] of waters) colliders.push({ x0, y0, x1, y1, z0: -1, z1: 5, active: true });
-  // vlaggen
+  for (let x = 22.2; x < 54; x += 2.6) bays.push([x, -16.6, x + 2.5, -11.1, 's']);
+  for (let x = 25.2; x < 54; x += 2.6) bays.push([x, -5.4, x + 2.5, 0.1, 'n']);
+  for (let x = 26.0; x < 46; x += 2.6) bays.push([x, 10.2, x + 2.5, 15.7, 'n']);
+  bays.push([10.8, -16.6, 13.3, -11.1, 's']); bays.push([13.4, -16.6, 15.9, -11.1, 's']);
+  for (const [x0, y0, x1] of bays) { paintY(y0, y0 + 5.5, x0); paintY(y0, y0 + 5.5, x1); }
+  buildCars(bays.filter(() => rnd() < 0.62));
+  for (let x = 23; x < 54; x += 6) { box('pole', x - 0.06, -8.3, 0, x + 0.06, -8.18, 5.5, { col: true }); box('streetlamp', x - 0.4, -8.4, 5.4, x + 0.4, -8.1, 5.55); }
+  // hekwerk langs de weg
+  for (const [x0, x1] of [[-1.2, 43], [51, 57]]) { box('black', x0, -17.25, 1.75, x1, -17.15, 1.8); box('mesh', x0, -17.22, 0, x1, -17.18, 1.8, { col: true }); for (let x = x0; x <= x1; x += 2.5) box('black', x - 0.03, -17.23, 0, x + 0.03, -17.17, 1.85); }
+  // vlaggen bij de voorkant van volume A
   for (let i = 0; i < 3; i++) {
-    const x = 6.4 + i * 1.6, y = -2.2;
+    const x = 2.0 + i * 2.2, y = -12.5;
     box('pole', x - 0.05, y - 0.05, 0, x + 0.05, y + 0.05, 8.5, { col: true });
     const g = new THREE.PlaneGeometry(2.4, 1.5, 18, 8); g.translate(1.2, 0, 0);
     const c = document.createElement('canvas'); c.width = 512; c.height = 320; const cx = c.getContext('2d');
-    cx.fillStyle = '#fff'; cx.fillRect(0, 0, 512, 320); drawLogo(cx, 40, 85, 175);
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, 512, 320); { const lh = 440 * LOGO_H / LOGO_W; drawLogo(cx, 36, (320 - lh) / 2, lh); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const f = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.85 }));
     f.position.set(x + 0.05, 7.6, -y); f.rotation.y = 0.35; f.castShadow = true; scene.add(f); flags.push({ mesh: f, base: g.attributes.position.array.slice(), ph: i * 1.3 });
   }
-  // zuil met naam bij inrit
-  box('trim', 21.5, -36.5, 0, 22.0, -34.5, 2.6, { col: true }); box('grass', 0, -20.9, 0, 1.4, -15, 0.06); box('grass', 10, -20.9, 0, 12, -15, 0.06);
-  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(21.49, -35.5, 1.35), -Math.PI / 2);
-  // straatverlichting
-  for (let x = -120; x < 200; x += 28) { box('pole', x - 0.07, -38.2, 0, x + 0.07, -38.06, 7.5, { col: true }); box('pole', x - 0.05, -39.6, 7.4, x + 0.05, -38.1, 7.5); box('streetlamp', x - 0.2, -40.2, 7.25, x + 0.2, -39.4, 7.4); }
-  for (const [x, y] of [[12, -1], [24, -1], [-10, -12], [0.5, -21.5], [10.5, -21.5], [-2, 6]]) { box('pole', x - 0.08, y - 0.08, 0, x + 0.08, y + 0.08, 4.2, { col: true }); box('streetlamp', x - 0.35, y - 0.12, 4.05, x + 0.35, y + 0.12, 4.2); }
-  // groene randen / plantvakken voorplein
-  box('grass', 10.6, -2.9, 0, 14.8, -0.4, 0.06); box('grass', 21.2, -2.9, 0, 24.6, -0.4, 0.06);
+  // naamzuil bij de inrit
+  box('trim', 52.2, -20.5, 0, 52.7, -18.5, 2.6, { col: true });
+  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(52.19, -19.5, 1.35), -Math.PI / 2);
+
+  // water: sloot oost, sloot langs de weg, bassin achter het witte huis
+  water = true;
+  const waters = [[57.2, -20, 59.8, 150], [-400, -35.5, 400, -32.5], [100, -21, 103, 320], [-1, 131, 60, 134]];
+  for (const [x0, y0, x1, y1] of waters) { box('water', x0, y0, 0.0, x1, y1, 0.012); box('grass', x0 - 0.7, y0 - 0.7, -0.02, x1 + 0.7, y1 + 0.7, 0.006); colliders.push({ x0, y0, x1, y1, z0: -1, z1: 5, active: true }); }
+  box('trim', 63, 42, 0, 92, 44, 1.6, { col: true }); box('trim', 63, 98, 0, 92, 100, 1.6, { col: true }); box('trim', 63, 42, 0, 65, 100, 1.6, { col: true }); box('trim', 90, 42, 0, 92, 100, 1.6, { col: true });
+  box('water', 65, 44, 0, 90, 98, 1.3); box('black', 65, 44, 0, 90, 98, 1.25);
+  // wit huis met bomen tussen kas en weg
+  box('houseWhite', 70, 16, 0, 78, 28, 4.2, { col: true });
+  { const s2 = new THREE.Shape(); s2.moveTo(69.6, 4.2); s2.lineTo(78.4, 4.2); s2.lineTo(74, 8.0); s2.closePath(); const g = new THREE.ExtrudeGeometry(s2, { depth: 12.8, bevelEnabled: false }); g.translate(0, 0, -28.4); addGeo('rooftile', g); }
+  for (const [x0, y0, x1, y1] of [[72, 15.98, 73.3, 16, 2.6], [75, 15.98, 76.3, 16]]) box('black', x0, y0 - 0.02, 1.0, x1, y1, 2.4);
+  box('trim', 77, 22, 0, 82, 26, 2.6, { col: true });
+
+  // buren aan de westkant: kantoorvilla, hal, parkeerterrein, silo
+  flat('asphalt', -48, -21, -10.5, 12);
+  const nb = []; for (let x = -46; x < -12; x += 2.6) { nb.push([x, -6, x + 2.5, -0.5, 'n']); nb.push([x, 4.5, x + 2.5, 10, 's']); }
+  for (const [x0, y0, x1] of nb) { paintY(y0, y0 + 5.5, x0); }
+  buildCars(nb.filter(() => rnd() < 0.85), true);
+  box('brick', -72, -20, 0, -50, -7, 7.0, { col: true });
+  { const cone = new THREE.ConeGeometry(1, 1, 4); cone.rotateY(Math.PI / 4); cone.scale(23.5 / Math.SQRT2, 4.2, 14.5 / Math.SQRT2); cone.translate(-61, 9.1, 13.5); addGeo('rooftile', cone); }
+  for (let x = -70.5; x < -51; x += 2.6) { box('black', x, -20.06, 1.0, x + 1.3, -20, 2.6); box('black', x, -20.06, 4.2, x + 1.3, -20, 5.8); }
+  box('farPanel', -75, 12, 0, -11, 62, 7.5, { col: true }); box('black', -75, 11.94, 3.0, -11, 12, 4.0);
+  for (let i = 0; i < 9; i++) box('farPanel', -70 + i * 6, 20 + (i % 3) * 12, 7.5, -68 + i * 6, 22 + (i % 3) * 12, 8.6);
+  // erfgrens: hekwerk tussen het buurperceel en de strook langs ons gebouw
+  box('black', -10.25, -21, 1.75, -10.15, 64, 1.8); box('mesh', -10.22, -21, 0, -10.18, 64, 1.8, { col: true }); for (let y = -21; y <= 64; y += 2.5) box('black', -10.23, y - 0.03, 0, -10.17, y + 0.03, 1.85);
+  { const sl = new THREE.CylinderGeometry(2.6, 2.6, 13, 24); sl.translate(-16, 6.5, -66); addGeo('white', sl); colliders.push({ x0: -18.6, x1: -13.4, y0: 63.4, y1: 68.6, z0: 0, z1: 13, active: true }); }
+  // snelweg ten zuiden, met middenberm en verlichting
+  flat('asphalt', -600, -76, 600, -63); flat('asphalt', -600, -60, 600, -47); box('grass', -600, -63, 0, 600, -60, 0.15);
+  for (const y of [-72.7, -69.4, -66.1, -56.7, -53.4, -50.1]) paintX(-600, 600, y, 4);
+  for (const y of [-75.6, -63.4, -59.6, -47.4]) paintX(-600, 600, y);
+  for (let x = -300; x < 300; x += 40) { box('pole', x - 0.1, -61.6, 0, x + 0.1, -61.4, 12); box('pole', x - 0.05, -64, 11.9, x + 0.05, -59, 12); box('streetlamp', x - 0.25, -64.3, 11.7, x + 0.25, -63.6, 11.9); box('streetlamp', x - 0.25, -59.4, 11.7, x + 0.25, -58.7, 11.9); }
+  // straatverlichting Hoge Noordweg
+  for (let x = -100; x < 90; x += 30) { box('pole', x - 0.07, -28.2, 0, x + 0.07, -28.06, 7.5, { col: true }); box('pole', x - 0.05, -28.1, 7.4, x + 0.05, -26.6, 7.5); box('streetlamp', x - 0.2, -26.9, 7.25, x + 0.2, -26.2, 7.4); }
 
   // bomen
   const trees = [];
-  for (let x = -260; x < 300; x += rr(7, 11)) trees.push([x, -56 + rr(-1, 1), 'round']);
-  for (let y = -34; y < 260; y += rr(5, 7)) trees.push([126 + rr(-0.5, 0.5), y, 'poplar']);
-  for (let y = 36; y < 260; y += rr(6, 9)) trees.push([-29, y, 'round']);
-  for (const [x, y] of [[-8, -26], [-1, -27], [6, -26], [-15, -18], [-15, -6], [24, -28], [9, -32], [28, -37.5]]) trees.push([x, y, 'round']);
-  for (let i = 0; i < 40; i++) trees.push([rr(-60, 130), rr(-110, -66), 'round']);
+  for (const [x, y] of [[66, 14], [68, 31], [80, 31], [83, 18], [62, 24], [86, 26], [64, 36]]) trees.push([x, y, 'big']);
+  for (let y = 40; y < 300; y += rr(6, 9)) trees.push([106 + rr(-0.5, 0.5), y, 'round']);
+  for (let x = -300; x < 300; x += rr(9, 14)) trees.push([x, -40 + rr(-1, 1), 'round']);
+  for (let x = 110; x < 260; x += rr(6, 8)) trees.push([x, 120 + rr(-1, 1), 'poplar']);
+  for (const [x, y] of [[-6, -25], [8, -30], [30, -30], [60, -10], [62, -2], [-52, -24], [-30, -24]]) trees.push([x, y, 'round']);
   buildTrees(trees);
-  // huizen langs de dijk
-  for (let x = -50; x < 120; x += rr(16, 24)) {
-    const y = rr(-82, -72), w = rr(8, 11), d = rr(9, 11), h = rr(4.5, 6), mat = rnd() < 0.5 ? 'brick' : 'houseWhite';
-    box(mat, x, y - d, 0, x + w, y, h, { col: true });
-    const s = new THREE.Shape(); s.moveTo(-0.4, h); s.lineTo(d + 0.4, h); s.lineTo(d / 2, h + rr(3, 4.2)); s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: w + 0.6, bevelEnabled: false }); g.rotateY(Math.PI / 2); g.translate(x - 0.3, 0, -(y - d));
-    addGeo('rooftile', g);
-    box('black', x + 1.5, y + 0.01, 1.0, x + 3.5, y + 0.05, 2.4); box('black', x + w - 3.5, y + 0.01, 1.0, x + w - 1.5, y + 0.05, 2.4);
+  // woningen langs de wetering (noordoost)
+  for (let y = 140; y < 300; y += rr(16, 22)) {
+    const x = rr(112, 120), w = rr(9, 12), d = rr(8, 10), h = rr(4.5, 6), mat = rnd() < 0.5 ? 'brick' : 'houseWhite';
+    box(mat, x, y, 0, x + w, y + d, h, { col: true });
+    const s2 = new THREE.Shape(); s2.moveTo(x - 0.4, h); s2.lineTo(x + w + 0.4, h); s2.lineTo(x + w / 2, h + rr(3, 4)); s2.closePath();
+    const g = new THREE.ExtrudeGeometry(s2, { depth: d + 0.6, bevelEnabled: false }); g.translate(0, 0, -(y + d + 0.3)); addGeo('rooftile', g);
   }
-  // kassencomplexen in de omgeving
-  const ng = [[-340, 40, -50, 300], [135, -20, 460, 300], [-360, -330, -70, -70], [140, -340, 430, -95], [-560, 330, 520, 640]];
+  // kassen en bedrijven in de omgeving (kassengebied Westland)
+  const ng = [[-1, 137, 95, 330], [-160, 66, -11, 330], [-420, 70, -165, 420], [-420, -330, -60, -95], [-40, -360, 420, -100], [-600, 440, 600, 760], [130, 330, 520, 600]];
   for (const [x0, y0, x1, y1] of ng) {
     box('ngRoof', x0, y0, 6.2, x1, y1, 6.8); box('ngSide', x0, y0, 0, x1, y1, 6.2, { col: true });
     const cx = x0 + (x1 - x0) * rr(0.2, 0.8), cy = y0 + (y1 - y0) * rr(0.2, 0.8); const ch = rr(32, 48);
     const cyl = new THREE.CylinderGeometry(1.1, 1.4, ch, 14); cyl.translate(cx, ch / 2, -cy); addGeo('farPanel', cyl);
     steamEmitters.push(new THREE.Vector3(cx, ch, -cy));
   }
-  box('farPanel', -150, -40, 0, -70, 10, 11, { col: true }); box('trim', -150, -40.1, 7, -70, -39.9, 8.2);
-  box('farPanel', 150, -70, 0, 210, -40, 9, { col: true });
-  { const s2 = new THREE.CylinderGeometry(7, 7, 11, 28); s2.translate(-36, 5.5, -40); addGeo('silo', s2); colliders.push({ x0: -43, x1: -29, y0: 33, y1: 47, z0: 0, z1: 11, active: true }); }
-  steamEmitters.push(new THREE.Vector3(-36, 30, -60)); { const c2 = new THREE.CylinderGeometry(0.9, 1.1, 30, 12); c2.translate(-36, 15, -60); addGeo('farPanel', c2); }
+  // bedrijventerrein aan de oostkant (grote platte hallen)
+  for (const [x0, y0, x1, y1, h] of [[130, 30, 300, 120], [130, 140, 260, 220, 9], [320, 20, 520, 200, 12], [130, -15, 220, 20, 8]]) { box('farPanel', x0, y0, 0, x1, y1, h || 10, { col: true }); box('black', x0, y0 - 0.05, 2, x1, y0, 3); }
+  { const s2 = new THREE.CylinderGeometry(7, 7, 11, 28); s2.translate(60, 5.5, -170); addGeo('silo', s2); }
+  steamEmitters.push(new THREE.Vector3(210, 28, -80)); { const c2 = new THREE.CylinderGeometry(0.9, 1.1, 28, 12); c2.translate(210, 14, -80); addGeo('farPanel', c2); }
+}
+// rijdend verkeer op de snelweg en de Hoge Noordweg
+const traffic = [];
+let trafficMesh = null;
+function buildTraffic() {
+  const lanes = [[-71, -1, 30], [-67.7, -1, 26], [-74.3, -1, 23], [-51.8, 1, 30], [-55.1, 1, 26], [-48.5, 1, 23], [-25.3, 1, 13], [-22.7, -1, 13]];
+  traffic.push({ side: true, x: -7.4, y: 40, dir: 1, sp: 9, truck: false }, { side: true, x: -3.3, y: 250, dir: -1, sp: 8, truck: true });
+  for (const [y, dir, sp] of lanes) for (let k = 0; k < (y > -30 ? 2 : 4); k++) { const truck = y < -30 && rnd() < 0.3; traffic.push({ y, dir, sp: sp * rr(0.85, 1.1), x: rr(-500, 500), truck }); }
+  trafficMesh = inst(new RoundedBoxGeometry(1, 1, 1, 2, 0.12), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.5 }), traffic.length, true);
+  const c = new THREE.Color(); traffic.forEach((v, i) => { c.set(v.truck ? pick([0xf2f2f2, 0xc21f1f, 0x2b4f8a]) : pick([0xf4f4f4, 0x15171a, 0x8b9399, 0x24324f, 0xc9ced2])); trafficMesh.setColorAt(i, c); });
+  for (const v of traffic) if (v.side) colliders.push(v.col = { x0: 0, x1: 0, y0: 0, y1: 0, z0: 0, z1: 0, active: false });
+  trafficMesh.frustumCulled = false;
+}
+const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _ts = new THREE.Vector3(), _tp = new THREE.Vector3();
+function updateTraffic(dt) {
+  if (!trafficMesh) return;
+  traffic.forEach((v, i) => {
+    const L = v.truck ? (v.side ? 9 : 13) : 4.5, H = v.truck ? 3.4 : 1.5, Wd = v.truck ? 2.5 : 1.85;
+    if (v.side) { v.y += v.dir * v.sp * dt; if (v.y > 420) v.y = -20; if (v.y < -20) v.y = 420; _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
+    v.x += v.dir * v.sp * dt; if (v.x > 520) v.x = -520; if (v.x < -520) v.x = 520;
+    if (v.y > -30 && v.x > 90) v.x = v.dir > 0 ? -400 : 88;
+    _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(L, H, Wd)); trafficMesh.setMatrixAt(i, _tm);
+  });
+  trafficMesh.instanceMatrix.needsUpdate = true;
 }
 function buildCars(bays) {
   const n = bays.length; if (!n) return;
@@ -1147,7 +1304,7 @@ function applyPreset(name) {
   scene.fog.color.set(P.fog); scene.fog.density = P.fogD; renderer.toneMappingExposure = P.exp;
   if (envRT) envRT.dispose(); envGround.material.color.set(name === 'dusk' ? 0x15171c : 0x4a4d3a); envRT = pmrem.fromScene(envScene, 0, 0.1, 200); scene.environment = envRT.texture;
   scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material && o.material !== M.glass && o.material !== M.ghGlass && o.material !== M.water) o.material.envMapIntensity = P.env; });
-  ghLampMat.emissiveIntensity = P.lamps; M.lamp.emissiveIntensity = P.lamps;
+  ghLampMat.emissiveIntensity = P.lamps; M.lamp.emissiveIntensity = P.lamps; if (neonSign) neonSign.material.emissiveIntensity = name === 'dusk' ? 2.6 : 0.12;
   M.ngRoof.emissiveIntensity = P.gh; M.ngSide.emissiveIntensity = P.gh * 0.25; M.streetlamp.emissiveIntensity = P.street;
   M.led.emissiveIntensity = P.interior;
   if (steam) { steam.material.uniforms.uFog.value.set(P.fog); steam.material.uniforms.uDen.value = P.fogD; steam.material.uniforms.uLight.value = P.steam; }
@@ -1195,8 +1352,10 @@ const ROOMS = [
   { n: 'Opslagruimte 1', c: '0.20', a: 167, l: 1, r: [[3.3, 8, 16, 21.4]] },
 ];
 const OUT = [
-  { n: 'Kas', c: 'teelt', r: ghRegions.map(R => [R.x0, R.y0, R.x1, R.y1]) },
-  { n: 'Voorplein', c: 'buiten', r: [[-60, -60, 25, 8], [-60, 8, 0, 24]] },
+  { n: 'Kas', c: 'tomaten', r: ghRegions.map(R => [R.x0, R.y0, R.x1, R.y1]) },
+  { n: 'Parkeerplein', c: 'P', r: [[10.3, -17.3, 57, 8], [25, 8, 57, 16]] },
+  { n: 'Weg tussen de kassen', c: 'weg', r: [[-9.5, -21, -1.2, 420]] },
+  { n: 'Hoge Noordweg', c: 'weg', r: [[-400, -27, 97, -21], [90, -27, 97, 320]] },
 ];
 function roomAt(x, y, lvl) {
   for (const R of ROOMS) if (R.l === lvl) for (const r of R.r) if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]) return R;
@@ -1204,17 +1363,17 @@ function roomAt(x, y, lvl) {
   return { n: 'Buitenterrein', c: 'Westland' };
 }
 const GOTO = [
-  ['Voorplein', 17.9, -9, 0, 0], ['Entree', 17.9, 9.0, 0, 0], ['Ontvangstruimte', 21.0, 14.8, 0, 160], ['Hal', 17.2, 15.2, 0, 10],
+  ['Parkeerplein', 30, -8, 0, 300], ['Entree (rieten luifel)', 17.9, 0.5, 0, 0], ['Ontvangstruimte', 21.0, 14.8, 0, 160], ['Hal', 17.2, 15.2, 0, 10],
   ['Kantine', 15.2, 12.6, 0, 225], ['Teeltkantoor', 7.9, 17.0, 0, 300], ['Spreekkamer 1', 29.4, 19.0, 0, 300], ['Demoruimte (tomatenrassen)', 33.0, 19.6, 0, 90],
   ['Presentatieruimte (verd.)', 38.5, 22.6, FL1, 245], ['Ruimte 1.01 (verd.)', 20.2, 17.0, FL1, 40], ['Technische dienst', 6.0, 11.0, 0, 90], ['Goederenontvangst', 9.4, 4.8, 0, 300],
-  ['Kas — tussen de tomaten', 41.0, 8.5, 0, 180], ['Kas — middenpad zuid', 31, 12.5, 0, 150], ['Kas — noord', 14, 26.5, 0, 0],
+  ['Kas — tussen de tomaten', 48.0, 30.0, 0, 0], ['Kas — middenpad', 20, 26.5, 0, 90], ['Kas — kopgevel', 47.9, 18.5, 0, 0], ['Voorkant aan de weg', 5.2, -19, 0, 0],
 ];
 
 /* ==========================================================================
    MINIKAART
    ========================================================================== */
 const mm = $('#minimap'), mmx = mm.getContext('2d');
-const MAPB = { x0: -32, y0: -46, x1: 122, y1: 88, s: 10 };
+const MAPB = { x0: -40, y0: -40, x1: 110, y1: 135, s: 10 };
 const mapCanvas = [0, 1].map(() => { const c = document.createElement('canvas'); c.width = (MAPB.x1 - MAPB.x0) * MAPB.s; c.height = (MAPB.y1 - MAPB.y0) * MAPB.s; return c; });
 const mpx = (x, y) => [(x - MAPB.x0) * MAPB.s, (MAPB.y1 - y) * MAPB.s];
 function drawPlans() {
@@ -1222,7 +1381,9 @@ function drawPlans() {
     const g = mapCanvas[lvl].getContext('2d'), s = MAPB.s; g.fillStyle = '#121816'; g.fillRect(0, 0, mapCanvas[lvl].width, mapCanvas[lvl].height);
     // kas
     g.fillStyle = 'rgba(143,191,106,.10)'; for (const R of ghRegions) { const [a, b] = mpx(R.x0, R.y1); g.fillRect(a, b, (R.x1 - R.x0) * s, (R.y1 - R.y0) * s); }
-    g.strokeStyle = 'rgba(143,191,106,.18)'; g.lineWidth = 1; for (const R of ghRegions) for (let x = R.x0 + 0.8; x < R.x1; x += 1.6) { const yy0 = R.y0 === 24 ? 29.5 : R.y0 === -35 ? -34.5 : null; if (yy0 === null) continue; const yy1 = R.y0 === 24 ? 79.5 : 10.5; const [a, b] = mpx(x, yy1), [, d] = mpx(x, yy0); g.beginPath(); g.moveTo(a, b); g.lineTo(a, d); g.stroke(); }
+    g.strokeStyle = 'rgba(143,191,106,.22)'; g.lineWidth = 2; for (const [yy0, yy1] of [[29.5, 73.5], [77.5, 123.5]]) for (let x = 0.8; x < 54.5; x += 1.6) { const [a, b] = mpx(x, yy1), [, d] = mpx(x, yy0); g.beginPath(); g.moveTo(a, b); g.lineTo(a, d); g.stroke(); }
+    g.fillStyle = '#262c2a'; for (const r of [[10.3, -17, 56, 8], [25, 8, 56, 16], [-9.5, -21, -1.2, 420], [-400, -27, 97, -21], [90, -27, 97, 320]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
+    g.fillStyle = '#2b4c55'; for (const r of [[57.2, -20, 59.8, 150]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
     // gebouw
     g.fillStyle = '#e9ece6'; for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
     if (lvl === 1) { g.fillStyle = 'rgba(18,24,22,.55)'; for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } g.fillStyle = '#e9ece6'; for (const r of [[3.3, 8, 16, 21.4], [18, 21.6, 19.6, 24], [19.6, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } }
@@ -1237,7 +1398,7 @@ function drawPlans() {
     // labels
     g.fillStyle = '#2a3330'; g.textAlign = 'center';
     for (const R of ROOMS) if (R.l === lvl && R.r[0][2] - R.r[0][0] > 2) { const r = R.r[0]; const [a, b] = mpx((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); g.font = '600 13px Archivo, Arial'; g.fillText(R.n, a, b); g.font = '11px "IBM Plex Mono", monospace'; g.fillStyle = '#9a6a1f'; g.fillText(R.c + (R.a ? ' · ' + R.a + ' m²' : ''), a, b + 14); g.fillStyle = '#2a3330'; }
-    g.fillStyle = 'rgba(200,225,190,.75)'; g.font = '600 18px Archivo, Arial'; if (lvl === 0) { let [a, b] = mpx(60, 55); g.fillText('KAS', a, b); [a, b] = mpx(65, -10); g.fillText('KAS', a, b); [a, b] = mpx(4, -25); g.fillStyle = 'rgba(238,241,236,.5)'; g.fillText('PARKEREN', a, b); }
+    g.fillStyle = 'rgba(200,225,190,.75)'; g.font = '600 18px Archivo, Arial'; if (lvl === 0) { let [a, b] = mpx(27, 76); g.fillText('TOMATENKAS', a, b); [a, b] = mpx(38, -6); g.fillStyle = 'rgba(238,241,236,.6)'; g.fillText('P', a, b); [a, b] = mpx(20, -24); g.fillText('HOGE NOORDWEG', a, b); g.fillStyle = 'rgba(238,241,236,.35)'; [a, b] = mpx(-28, -4); g.fillText('BUREN', a, b); [a, b] = mpx(-5.3, 100); g.save(); g.translate(a, b); g.rotate(-Math.PI / 2); g.fillText('WEG', 0, 0); g.restore(); }
   }
 }
 function drawMinimap(x, y, yaw, lvl) {
@@ -1286,7 +1447,9 @@ function updateWalk(dt) {
   const len = Math.hypot(fx, sx); if (len > 1) { fx /= len; sx /= len; }
   const speed = (keys.ShiftLeft || keys.ShiftRight ? 4.6 : 2.1);
   const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-  const dx = (fx * sy + sx * cy) * speed * dt, dy = (fx * cy - sx * sy) * speed * dt;
+  const tvx = (fx * sy + sx * cy) * speed, tvy = (fx * cy - sx * sy) * speed, acc = Math.min(1, dt * (len > 0.05 ? 7 : 9));
+  player.mvx = (player.mvx || 0) + (tvx - (player.mvx || 0)) * acc; player.mvy = (player.mvy || 0) + (tvy - (player.mvy || 0)) * acc;
+  const dx = player.mvx * dt, dy = player.mvy * dt;
   const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 0.1) || 1;
   for (let i = 0; i < steps; i++) {
     const nx = player.x + dx / steps; if (!blocked(nx, player.y, player.feet)) player.x = nx;
@@ -1297,7 +1460,7 @@ function updateWalk(dt) {
   const g = groundAt(player.x, player.y, player.feet);
   if (player.feet > g) { player.vy -= 9.8 * dt; player.feet = Math.max(g, player.feet + player.vy * dt); } else player.vy = 0;
   player.x = THREE.MathUtils.clamp(player.x, -200, 300); player.y = THREE.MathUtils.clamp(player.y, -200, 300);
-  const moving = len > 0.1; player.bob += moving ? dt * speed * 3.2 : 0;
+  const moving = Math.hypot(player.mvx, player.mvy) > 0.3; player.bob += moving ? dt * speed * 3.2 : 0;
   const targetY = player.feet + 1.68 + (moving ? Math.sin(player.bob) * 0.025 : 0);
   player.eyeY += (targetY - player.eyeY) * Math.min(1, dt * 12);
   camera.position.set(player.x, player.eyeY, -player.y);
@@ -1306,22 +1469,22 @@ function updateWalk(dt) {
 
 /* ---------- tour (camera paths) ---------- */
 const SHOTS = [
-  { t: 'Nieuwbouw bedrijfsruimte', s: 'Bedrijfsruimte met dubbelhoge ontvangst, verdieping en kas — Hoge Noordweg 6a, Naaldwijk', d: 11, cut: true,
-    p: [W(-62, -70, 46), W(-46, -62, 36), W(-30, -50, 27)], q: [W(26, 12, 0), W(22, 10, 1), W(18, 8, 3)] },
-  { t: 'Voorplein en entree', s: 'Glazen entree onder een stalen luifel; ernaast de dubbelhoge pui van de ontvangstruimte', d: 10, cut: true,
-    p: [W(2, -34, 10), W(12, -17, 5), W(17.9, -4, 2.2), W(17.9, 6.5, 1.75)], q: [W(18, 8, 5), W(18, 8, 3.2), W(17.9, 10, 2.0), W(17.9, 14, 1.75)] },
+  { t: 'Nieuwbouw bedrijfsruimte', s: 'Bedrijfsruimte met de tomatenkas erachter — Hoge Noordweg 6a, Naaldwijk', d: 11, cut: true,
+    p: [W(78, -92, 68), W(64, -80, 54), W(50, -64, 40)], q: [W(26, 50, 0), W(25, 38, 0), W(22, 20, 3)] },
+  { t: 'Parkeerplein en entree', s: 'Entree onder een puntig rieten dak; het neonlogo op de kopgevel aan de weg', d: 10, cut: true,
+    p: [W(46, -14, 9), W(32, -9, 4.6), W(17.9, -3, 2.2), W(17.9, 6.5, 1.75)], q: [W(14, 6, 4.5), W(17, 7, 3.6), W(17.9, 10, 2.0), W(17.9, 14, 1.75)] },
   { t: 'Entree 0.01', s: 'Sluis met hygiënepoortjes — daarachter de hal en de ontvangstruimte', d: 7,
     p: [W(17.9, 6.5, 1.75), W(17.9, 10.5, 1.7), W(17.9, 13.4, 1.7), W(20.2, 14.6, 1.9)], q: [W(17.9, 14, 1.75), W(17.9, 18, 1.7), W(21, 16, 2.0), W(25, 10, 2.8)] },
-  { t: 'Ontvangstruimte 0.03', s: 'Dubbelhoge ruimte met glazen gevel naar de kas', d: 9,
+  { t: 'Ontvangstruimte 0.03', s: 'Dubbelhoge ruimte met glazen gevels naar het parkeerplein; op tafel schalen met tomaten', d: 9,
     p: [W(20.2, 14.6, 1.9), W(21.0, 15.2, 2.6), W(22.6, 15.0, 3.6)], q: [W(25, 10, 2.8), W(26, 8.5, 3.6), W(23, 8, 4.4)] },
   { t: 'Hal 0.02', s: 'Open hal met keukeneiland; de trap voert naar de verdieping op +3200', d: 11,
     p: [W(22.6, 15.0, 3.0), W(21.0, 15.6, 1.9), W(18.8, 16.2, 1.72), W(18.8, 18.5, 2.9), W(18.8, 21.2, 4.6), W(18.9, 22.8, 4.9)], q: [W(17, 20, 2.0), W(18.8, 20, 2.2), W(18.8, 22, 3.0), W(18.8, 24, 4.4), W(19, 24, 4.9), W(22, 22.8, 4.9)] },
-  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes, ramen met uitzicht over de kas', d: 11,
-    p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(33, 21.6, 5.1), W(37.5, 19.5, 5.2)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19, 4.8), W(32, 15, 4.6), W(33, 10, 4.2)] },
-  { t: 'De kas', s: 'Tomatenplanten aan de hoge draad — per vak een ander ras: rood, geel, oranje, bruin en cherry', d: 11, cut: true,
-    p: [W(32.9, 18.0, 5.1), W(33.5, 13.5, 4.4), W(41.0, 11.0, 2.2), W(41.0, 3.0, 1.45), W(41.0, -8.0, 1.4)], q: [W(34, 10, 4.0), W(40, 6, 2.2), W(41.0, 2.0, 1.4), W(41.0, -8, 1.2), W(41.0, -20, 1.2)] },
+  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes, ramen naar de kas', d: 11,
+    p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(32, 21.2, 5.0), W(36.5, 20.6, 5.0)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19, 4.8), W(37.5, 18, 4.6), W(42, 20.6, 4.5)] },
+  { t: 'De tomatenkas', s: 'Tomatenplanten aan de hoge draad — per vak een ander ras: rood, geel, oranje, bruin en cherry', d: 12,
+    p: [W(36.5, 20.6, 5.0), W(41.5, 20.6, 4.6), W(48.0, 26.0, 2.6), W(48.0, 36.0, 1.5), W(48.0, 54.0, 1.45)], q: [W(42, 20.6, 4.5), W(48, 28, 3.0), W(48, 40, 1.5), W(48, 60, 1.3), W(48, 76, 1.3)] },
   { t: 'Totaalbeeld', s: 'Bedrijfsruimte en kas als één geheel in het Westlandse kassengebied', d: 14, cut: true,
-    p: [W(118, -60, 22), W(95, -105, 55), W(30, -135, 85), W(-40, -110, 95)], q: [W(70, -10, 3), W(45, 5, 2), W(30, 15, 0), W(30, 20, 0)] },
+    p: [W(95, 60, 26), W(115, -20, 55), W(70, -100, 80), W(-10, -115, 90)], q: [W(28, 70, 3), W(28, 55, 0), W(25, 40, 0), W(25, 40, 0)] },
 ];
 SHOTS.forEach(s => { s.pc = new THREE.CatmullRomCurve3(s.p, false, 'centripetal'); s.qc = new THREE.CatmullRomCurve3(s.q, false, 'centripetal'); });
 const TOUR_LEN = SHOTS.reduce((a, s) => a + s.d, 0);
@@ -1350,7 +1513,7 @@ function updateTour(dt) {
 /* ---------- orbit / maquette ---------- */
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true; orbit.dampingFactor = 0.06; orbit.maxPolarAngle = 1.48; orbit.minDistance = 6; orbit.maxDistance = 420; orbit.enabled = false;
-orbit.target.copy(W(20, 12, 2));
+orbit.target.copy(W(25, 30, 2));
 let cut = 'all';
 function setCut(c, fly = true) {
   if (fly && mode === 'orbit' && c !== 'all') { camera.position.copy(W(20, -16, 42)); orbit.target.copy(W(20, 12, 0)); }
@@ -1390,8 +1553,8 @@ function setMode(m) {
   if (m !== 'orbit') setCut('all');
   if (m === 'tour') { tourT = 0; lastShot = -1; }
   if (m === 'orbit') {
-    if (prev !== 'tour') { camera.position.copy(W(-28, -42, 40)); }
-    orbit.target.copy(W(20, 12, 2)); orbit.update();
+    if (prev !== 'tour') { camera.position.copy(W(60, -55, 45)); }
+    orbit.target.copy(W(25, 30, 2)); orbit.update();
     $('#legend').innerHTML = '<b>Maquette</b><span>Slepen om te draaien · scrollen om te zoomen · rechtermuis om te schuiven. Kies een snede om de indeling per verdieping te zien.</span>';
   }
   if (walk) {
@@ -1441,14 +1604,169 @@ const sel = $('#goto'); GOTO.forEach((g, i) => { const o = document.createElemen
 sel.addEventListener('change', () => { teleport(GOTO[+sel.value]); sel.blur(); cv.focus(); });
 $('#fsBtn').addEventListener('click', () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => { }); } catch (e) { } });
 
+
+/* ==========================================================================
+   FEEDBACK — opmerkingen per plek/ruimte, gedeeld opgeslagen (db) of lokaal
+   ========================================================================== */
+const FB = { items: [], db: null, user: null, me: null, canWrite: true, filter: 'open', picking: false, draft: null, local: false, hl: null };
+const fbEls = { panel: $('#fbPanel'), list: $('#fbList'), status: $('#fbStatus'), form: $('#fbForm'), pick: $('#fbPick'), count: $('#fbCount'), pins: $('#pins') };
+const FB_PLACES = [...ROOMS.map(r => r.n + (r.l ? ' (verdieping)' : '')), 'Gevel / dak', 'Kas', 'Voorplein / parkeren', 'Omgeving', 'Algemeen'];
+FB_PLACES.forEach(n => { const o = document.createElement('option'); o.textContent = n; $('#fbRoom').appendChild(o); });
+const rc = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pickScene(cx, cy) {
+  ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); rc.setFromCamera(ndc, camera); rc.far = 400;
+  const objs = scene.children.filter(o => o !== sky && o !== steam && o.visible && (o.isMesh || o.isGroup));
+  const hits = rc.intersectObjects(objs, true).filter(h => h.point.y <= CLIP[0].constant + 0.01 && !(h.object.material && h.object.material.transparent && h.object.material.opacity < 0.3 && h.distance < 1));
+  return hits[0] ? hits[0].point : null;
+}
+function describeSpot(pt) {
+  const x = pt.x, y = -pt.z, h = pt.y, lvl = h > FL1 - 0.3 && h < 7.2 && x > 3 && x < 40.5 && y > 7.9 && y < 24.1 ? 1 : 0;
+  const inB = x >= -0.3 && x <= 40.3 && y >= -0.3 && y <= 24.3 && (y >= 8 || x <= 10.6) && (y >= 16 || x <= 25.3);
+  let R = roomAt(x, y, lvl); if (R.n === 'Buitenterrein' || (!ROOMS.includes(R) && lvl)) R = roomAt(x, y, 0);
+  let place = ROOMS.includes(R) ? R.n + (R.l ? ' (verdieping)' : '') : R.n === 'Kas' ? 'Kas' : R.n === 'Voorplein' ? 'Voorplein / parkeren' : 'Omgeving';
+  if (inB && h > 6.6) place = 'Gevel / dak';
+  if (inB && !ROOMS.includes(R)) place = 'Gevel / dak';
+  return { place, code: ROOMS.includes(R) ? R.c : '', lvl };
+}
+function currentView() {
+  if (mode === 'walk') return { mode: 'walk', x: +player.x.toFixed(2), y: +player.y.toFixed(2), feet: +player.feet.toFixed(2), yaw: +player.yaw.toFixed(3), pitch: +player.pitch.toFixed(3) };
+  return { mode: 'orbit', cam: camera.position.toArray().map(v => +v.toFixed(2)), tgt: orbit.target.toArray().map(v => +v.toFixed(2)), cut };
+}
+function goView(v) {
+  if (!v) return;
+  if (v.mode === 'walk') { setMode('walk'); $('#hint').hidden = true; teleport(['', v.x, v.y, v.feet, THREE.MathUtils.radToDeg(v.yaw)]); player.pitch = v.pitch; }
+  else { setMode('orbit'); camera.position.fromArray(v.cam); orbit.target.fromArray(v.tgt); setCut(v.cut || 'all', false); orbit.update(); }
+}
+function startPick() {
+  if (!FB.canWrite) return;
+  if (mode === 'walk') { if (document.pointerLockElement) document.exitPointerLock?.(); const pt = pickScene(innerWidth / 2, innerHeight / 2); openForm(pt); return; }
+  if (mode === 'tour' || mode === 'none') setMode('orbit');
+  FB.picking = true; document.body.classList.add('picking'); fbEls.pick.hidden = false;
+}
+function stopPick() { FB.picking = false; document.body.classList.remove('picking'); fbEls.pick.hidden = true; }
+function openForm(pt) {
+  stopPick();
+  const d = pt ? describeSpot(pt) : { place: 'Algemeen', code: '', lvl: 0 };
+  FB.draft = { p: pt ? [+pt.x.toFixed(2), +(-pt.z).toFixed(2), +pt.y.toFixed(2)] : null, lvl: d.lvl, code: d.code, view: currentView() };
+  $('#fbWhere').textContent = pt ? d.place + (d.code && d.code !== 'trap' ? ' · ' + d.code : '') : 'Algemene opmerking over het ontwerp';
+  $('#fbRoom').value = d.place; $('#fbText').value = '';
+  fbEls.form.hidden = false; renderPins(); setTimeout(() => $('#fbText').focus(), 30);
+}
+function closeForm() { fbEls.form.hidden = true; FB.draft = null; renderPins(); }
+let downAt = null;
+cv.addEventListener('pointerdown', e => { if (FB.picking) downAt = [e.clientX, e.clientY]; }, true);
+cv.addEventListener('pointerup', e => {
+  if (!FB.picking || !downAt) return; const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null;
+  if (moved > 6) return; openForm(pickScene(e.clientX, e.clientY));
+}, true);
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (!fbEls.form.hidden) closeForm(); else if (FB.picking) stopPick(); }
+  if (e.code === 'KeyF' && mode === 'walk' && fbEls.form.hidden && document.activeElement?.tagName !== 'TEXTAREA') { e.preventDefault(); openPanel(true); startPick(); }
+});
+$('#fbAdd').addEventListener('click', startPick);
+$('#fbGeneral').addEventListener('click', () => openForm(null));
+$('#fbPickCancel').addEventListener('click', stopPick);
+$('#fbCancel').addEventListener('click', closeForm);
+function openPanel(open) { fbEls.panel.hidden = !open; $('#fbBtn').setAttribute('aria-expanded', open); $('#mapwrap').classList.toggle('fbhide', open); if (open && document.pointerLockElement) document.exitPointerLock?.(); renderList(); }
+$('#fbBtn').addEventListener('click', () => openPanel(fbEls.panel.hidden));
+$('#fbClose').addEventListener('click', () => openPanel(false));
+document.querySelectorAll('[data-ff]').forEach(b => b.addEventListener('click', () => { FB.filter = b.dataset.ff; document.querySelectorAll('[data-ff]').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList(); }));
+fbEls.form.addEventListener('submit', async e => {
+  e.preventDefault(); const text = $('#fbText').value.trim(); if (!text || !FB.draft) return;
+  const doc = { text, place: $('#fbRoom').value, code: FB.draft.code, cat: $('#fbCat').value, p: FB.draft.p, lvl: FB.draft.lvl, view: FB.draft.view, status: 'open', at: new Date().toISOString(), by: FB.me || null };
+  const btn = $('#fbSave'); btn.disabled = true; btn.textContent = 'Opslaan…';
+  try { await fbWrite(null, doc); closeForm(); openPanel(true); FB.filter = 'open'; document.querySelectorAll('[data-ff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.ff === 'open')); setStatus('Opgeslagen.'); }
+  catch (err) { setStatus(err && err.code === 'quota_exceeded' ? 'Opslaan lukt niet: de opslag is vol. Verwijder verwerkte opmerkingen.' : 'Opslaan lukte niet. Probeer het nog eens.'); }
+  finally { btn.disabled = false; btn.textContent = 'Opslaan'; }
+});
+function setStatus(t) { fbEls.status.textContent = t; }
+// opslag
+const LKEY = 'axia-nieuwbouw-feedback';
+function loadLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || '[]'); } catch (e) { return []; } }
+function saveLocal(a) { try { localStorage.setItem(LKEY, JSON.stringify(a)); } catch (e) { } }
+async function fbWrite(id, doc) {
+  if (FB.db) { if (id) await FB.db.doc('feedback/' + id).update(doc); else await FB.db.collection('feedback').add(doc); return; }
+  const a = loadLocal(); if (id) { const i = a.findIndex(x => x.id === id); if (i >= 0) Object.assign(a[i], doc); } else a.push({ id: 'l' + Date.now().toString(36), ...doc });
+  saveLocal(a); FB.items = a; renderList();
+}
+async function fbDelete(id) { if (FB.db) await FB.db.doc('feedback/' + id).delete(); else { const a = loadLocal().filter(x => x.id !== id); saveLocal(a); FB.items = a; renderList(); } }
+async function initFeedback() {
+  let cl = null; try { cl = window.claude && window.claude.use ? window.claude : null; } catch (e) { }
+  const [db, user] = cl ? await Promise.all([cl.use('db').catch(() => null), cl.use('user').catch(() => null)]) : [null, null];
+  FB.user = user; FB.me = user ? await user.id() : null;
+  if (!db) { FB.local = true; FB.items = loadLocal(); setStatus('Opmerkingen worden alleen in deze browser bewaard. Open de gedeelde pagina om ze met anderen en Claude te delen.'); renderList(); return; }
+  FB.db = db; const cw = user ? await user.can('data.write') : null; FB.canWrite = cw !== false; FB.isEditor = user ? await user.canEdit() : false;
+  if (!FB.canWrite) { $('#fbAdd').hidden = true; $('#fbGeneral').hidden = true; setStatus('Je kunt de opmerkingen lezen. Plaatsen kan met bewerk- of bijdragersrechten.'); }
+  setStatus('Opmerkingen laden…');
+  const timer = setTimeout(() => setStatus('De opmerkingen zijn nog niet bereikbaar; ze verschijnen zodra de verbinding er is.'), 10000);
+  db.collection('feedback').orderBy('at', 'asc').onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { clearTimeout(timer); if (fbEls.status.textContent.startsWith('Opmerkingen laden') || fbEls.status.textContent.startsWith('De opmerkingen zijn nog')) setStatus(''); }
+    FB.items = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderList();
+  }, err => { clearTimeout(timer); setStatus(err.code === 'revoked' ? '' : 'De opmerkingen konden niet worden geladen.'); });
+}
+async function renderList() {
+  const all = FB.items.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  all.forEach((it, i) => it._n = i + 1);
+  const open = all.filter(i => i.status !== 'done').length; fbEls.count.textContent = open ? open : '';
+  renderPins();
+  if (fbEls.panel.hidden) return;
+  const shown = all.filter(i => FB.filter === 'all' || (FB.filter === 'done' ? i.status === 'done' : i.status !== 'done'));
+  const ids = [...new Set(shown.map(i => i.by).filter(Boolean))];
+  const ps = FB.user && ids.length ? await FB.user.profiles(ids) : {};
+  fbEls.list.textContent = '';
+  if (!shown.length) { const li = document.createElement('li'); li.className = 'fb-empty'; li.style.border = '0'; li.textContent = FB.filter === 'done' ? 'Nog geen verwerkte opmerkingen.' : 'Nog geen open opmerkingen. Kies "Opmerking op een plek" en klik in het model op wat je wilt laten aanpassen.'; fbEls.list.appendChild(li); return; }
+  for (const it of shown) {
+    const li = document.createElement('li'); if (it.status === 'done') li.classList.add('done'); if (FB.hl === it.id) li.classList.add('hl');
+    const top = document.createElement('div'); top.className = 'fb-top';
+    const n = document.createElement('span'); n.className = 'fb-num'; n.textContent = it._n;
+    const r = document.createElement('span'); r.className = 'fb-room'; r.textContent = (it.place || 'Algemeen') + (it.code && it.code !== 'trap' && !String(it.place).includes(it.code) ? ' · ' + it.code : '');
+    const c = document.createElement('span'); c.className = 'fb-cat'; c.textContent = (it.cat || '').split(' /')[0];
+    top.append(n, r, c);
+    const t = document.createElement('div'); t.className = 'fb-text'; t.textContent = it.text;
+    const m = document.createElement('div'); m.className = 'fb-meta';
+    const who = it.by ? ((ps[it.by] && ps[it.by].name) || (it.by === FB.me ? 'jij' : 'iemand')) : (FB.local ? 'jij' : 'iemand');
+    let when = ''; try { when = new Date(it.at).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { }
+    m.textContent = who + ' · ' + when + (it.status === 'done' ? ' · verwerkt' : '');
+    const row = document.createElement('div'); row.className = 'fb-row';
+    const mk = (label, fn) => { const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = label; b.addEventListener('click', fn); row.appendChild(b); return b; };
+    if (it.view) mk('Bekijk', () => { FB.hl = it.id; goView(it.view); renderList(); });
+    if (FB.canWrite) mk(it.status === 'done' ? 'Heropen' : 'Verwerkt', () => fbWrite(it.id, { status: it.status === 'done' ? 'open' : 'done' }).catch(() => setStatus('Wijzigen lukte niet.')));
+    if (FB.canWrite && (FB.local || it.by === FB.me || FB.isEditor)) { const del = mk('Verwijder', () => { if (del.dataset.sure) fbDelete(it.id).catch(() => setStatus('Verwijderen lukte niet.')); else { del.dataset.sure = '1'; del.textContent = 'Zeker weten?'; setTimeout(() => { delete del.dataset.sure; del.textContent = 'Verwijder'; }, 3000); } }); }
+    li.append(top, t, m, row); fbEls.list.appendChild(li);
+  }
+}
+let pinEls = [];
+function renderPins() {
+  fbEls.pins.textContent = ''; pinEls = [];
+  const list = FB.items.filter(i => i.p && (i.status !== 'done' || FB.filter !== 'open'));
+  if (FB.draft && FB.draft.p) list.push({ p: FB.draft.p, _n: '+', _new: true });
+  for (const it of list) {
+    const b = document.createElement('button'); b.className = 'pin' + (it.status === 'done' ? ' done' : '') + (it._new ? ' new' : ''); b.type = 'button';
+    b.setAttribute('aria-label', 'Opmerking ' + it._n + (it.place ? ': ' + it.place : ''));
+    const s2 = document.createElement('span'), i2 = document.createElement('i'); i2.textContent = it._n; s2.appendChild(i2); b.appendChild(s2);
+    if (!it._new) b.addEventListener('click', () => { FB.hl = it.id; openPanel(true); setTimeout(() => fbEls.list.querySelector('li.hl')?.scrollIntoView({ block: 'nearest' }), 50); });
+    fbEls.pins.appendChild(b); pinEls.push({ el: b, v: new THREE.Vector3(it.p[0], it.p[2], -it.p[1]) });
+  }
+}
+const _pv = new THREE.Vector3();
+function updatePins() {
+  const show = mode !== 'tour';
+  for (const P of pinEls) {
+    _pv.copy(P.v); const dist = _pv.distanceTo(camera.position); _pv.project(camera);
+    const vis = show && _pv.z < 1 && Math.abs(_pv.x) < 1.05 && Math.abs(_pv.y) < 1.05 && dist < (mode === 'walk' ? 60 : 500) && P.v.y <= CLIP[0].constant + 0.05;
+    P.el.style.display = vis ? '' : 'none';
+    if (vis) P.el.style.transform = `translate(${(_pv.x * .5 + .5) * innerWidth}px, ${(-_pv.y * .5 + .5) * innerHeight}px)`;
+  }
+}
+
 /* ---------- loop ---------- */
 const clock = new THREE.Clock();
 const focus = new THREE.Vector3(), lastShadowFocus = new THREE.Vector3(1e9, 0, 0);
 let shadowExt = 0;
 function updateShadow() {
   const near = mode === 'walk' || (mode === 'tour' && camera.position.y < 9 && Math.abs(camera.position.x - 20) < 60);
-  const ext = near ? 42 : 95;
-  if (near) focus.set(camera.position.x, 0, camera.position.z); else focus.copy(W(30, 10, 0));
+  const ext = near ? 42 : 110;
+  if (near) focus.set(camera.position.x, 0, camera.position.z); else focus.copy(W(27, 45, 0));
   if (near) { focus.x = Math.round(focus.x / 8) * 8; focus.z = Math.round(focus.z / 8) * 8; }
   if (ext !== shadowExt) { const c = sun.shadow.camera; c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.near = 1; c.far = 600; c.updateProjectionMatrix(); shadowExt = ext; shadowDirty = true; }
   if (!focus.equals(lastShadowFocus)) { lastShadowFocus.copy(focus); shadowDirty = true; }
@@ -1493,6 +1811,7 @@ function frame() {
   }
   if (water) { T.waterN.offset.x = t * 0.004; T.waterN.offset.y = t * 0.0025; }
   if (steam) steam.material.uniforms.uTime.value = t;
+  updateTraffic(dt);
   finish.uniforms.uTime.value = t % 10;
   updateShadow();
   cullCrops();
@@ -1503,6 +1822,7 @@ function frame() {
     if (frameNo % 3 === 0) drawMinimap(player.x, player.y, player.yaw, lvl);
   }
   if (labelEls.length) updateLabels();
+  if (pinEls.length) updatePins();
   composer.render(dt);
   requestAnimationFrame(frame);
 }
@@ -1515,16 +1835,17 @@ addEventListener('resize', () => {
 /* ---------- boot ---------- */
 async function boot() {
   try { await Promise.race([Promise.all([document.fonts.load('800 40px Archivo'), document.fonts.load('800 40px Nunito'), document.fonts.load('600 40px Nunito')]), new Promise(r => setTimeout(r, 2000))]); } catch (e) { }
-  try { logoImg = await Promise.race([new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'axia-logo.png'; }), new Promise(r => setTimeout(() => r(null), 1500))]); } catch (e) { logoImg = null; }
+  try { logoImg = await Promise.race([new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = LOGO_SRC; }), new Promise(r => setTimeout(() => r(null), 3000))]); } catch (e) { logoImg = null; }
+  if (logoImg) { LOGO_W = logoImg.naturalWidth; LOGO_H = logoImg.naturalHeight; }
   paintLogoCanvas('ldLogo'); paintLogoCanvas('brandLogo');
   setLoad(0.08, 'Materialen genereren…'); await tick();
   buildTextures(); buildMaterials();
   setLoad(0.3, 'Bedrijfsruimte opbouwen…'); await tick();
-  buildBuilding();
+  buildBuilding(); buildNeon();
   setLoad(0.5, 'Kas en gewassen plaatsen…'); await tick();
   buildGreenhouse(); buildCrops();
   setLoad(0.7, 'Omgeving opbouwen…'); await tick();
-  buildSite(); buildSteam(); flushBatches(); drawPlans();
+  buildSite(); buildTraffic(); buildSteam(); flushBatches(); drawPlans();
   setLoad(0.88, 'Licht berekenen…'); await tick();
   applyPreset('morning');
   camera.position.copy(SHOTS[0].p[0]); camera.lookAt(SHOTS[0].q[0]);
@@ -1534,9 +1855,10 @@ async function boot() {
   requestAnimationFrame(frame);
   setTimeout(() => $('#loader')?.classList.add('out'), 250);
   window.__ready = true;
+  initFeedback().catch(() => { FB.local = true; FB.items = loadLocal(); renderList(); });
 }
 boot().catch(err => { $('#ldtxt').textContent = 'Het 3D-model kon niet laden: ' + err.message + '. Probeer een recente versie van Chrome, Edge, Safari of Firefox.'; console.error(err); });
-window.__dbg = { M, T, scene, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
+window.__dbg = { M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
 </script>
 </body>
 </html>
