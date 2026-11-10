@@ -649,6 +649,22 @@ function autoDoor(hor, c, a, b, zTop) {
   autoDoors.push({ hor, c, a, b, w, leaves, col, open: 0, cx: hor ? (a + b) / 2 : c, cy: hor ? c : (a + b) / 2 });
 }
 
+/* ---------- sluisbuisje: draait open als je ertegenaan loopt ---------- */
+let hyg = null;
+function hygArm(x, y, z, len) {
+  const piv = new THREE.Group(); piv.position.copy(W(x, y, z));
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len, 16), M.inox); tube.rotation.z = Math.PI / 2; tube.position.x = len / 2; tube.castShadow = true; piv.add(tube);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 16), M.inox); piv.add(hub);
+  scene.add(piv);
+  const col = { x0: x, x1: x + len, y0: y - 0.05, y1: y + 0.05, z0: z - 0.1, z1: z + 0.1, active: true }; colliders.push(col);
+  hyg = { piv, col, open: 0, cx: x + len / 2, cy: y };
+}
+function updateHyg(dt) {
+  if (!hyg) return; const cx = camera.position.x, cy = -camera.position.z;
+  const near = Math.hypot(cx - hyg.cx, cy - hyg.cy) < 1.5 && camera.position.y < 2.6;
+  hyg.open += ((near ? 1 : 0) - hyg.open) * Math.min(1, dt * 5); hyg.piv.rotation.y = hyg.open * Math.PI / 2; hyg.col.active = hyg.open < 0.5;
+}
+
 /* ---------- laad- en losdeuren: rollen omhoog als je ervoor staat ---------- */
 const sectDoors = [];
 function sectDoor(hor, c, a, b, z0, z1, t) {
@@ -771,20 +787,12 @@ function drawScreen(title, sub) {
 /* ==========================================================================
    BUILDING — afgeleid van tekening 218300-B (begane grond rev2 + verdieping)
    ========================================================================== */
-const EAVE = 7.0, RIDGE = 9.0, ST = 0.25, PT = 0.12, CEIL = 3.0, FL1 = 3.2;
-// drie bouwvolumes, nok van voor naar achter (zoals op de dronefoto's); het lage volume A steekt het verst naar de weg
-const VOLS = [
-  { n: 'A', x0: 0, x1: 10.3, y0: 0, y1: 24, e: 6.2, r: 7.8 },
-  { n: 'B', x0: 10.3, x1: 25, y0: 8, y1: 24, e: 7.0, r: 9.0 },
-  { n: 'C', x0: 25, x1: 40, y0: 16, y1: 24, e: 7.0, r: 9.0 }];
-const VA = VOLS[0], VB = VOLS[1], VC = VOLS[2];
-const roofZ = (v, x) => { const xm = (v.x0 + v.x1) / 2, hw = (v.x1 - v.x0) / 2; return v.e + (v.r - v.e) * Math.max(0, 1 - Math.abs(x - xm) / hw); };
-// wandvulling tot onder het dak (topgevel) op plan-y = yp, tussen x0 en x1, vanaf zb
-function profileWall(key, yp, x0, x1, zb, t, v) {
-  const xm = (v.x0 + v.x1) / 2, s2 = new THREE.Shape(); s2.moveTo(x0, zb); s2.lineTo(x1, zb); s2.lineTo(x1, roofZ(v, x1));
-  if (xm > x0 && xm < x1) s2.lineTo(xm, v.r); s2.lineTo(x0, roofZ(v, x0)); s2.closePath();
-  const g = new THREE.ExtrudeGeometry(s2, { depth: t, bevelEnabled: false }); g.translate(0, 0, -yp - t / 2); addGeo(key, g);
-}
+const EAVE = 7.0, RIDGE = 8.6, ST = 0.25, PT = 0.12, CEIL = 3.0, FL1 = 3.2;
+// drie dakbeuken met de nok evenwijdig aan de weg (zoals op de dronefoto's); de kopgevels springen trapsgewijs terug
+const ROWS = [
+  { y0: 0, y1: 8, x0: 0, x1: 10.3, e: 6.2, r: 7.6 },
+  { y0: 8, y1: 16, x0: 0, x1: 25, e: EAVE, r: RIDGE },
+  { y0: 16, y1: 24, x0: 0, x1: 40, e: EAVE, r: RIDGE }];
 
 function buildBuilding() {
   // --- vloeren
@@ -794,42 +802,40 @@ function buildBuilding() {
   fl('tile', 8.6, 16, 11.8, 21.4); fl('tile', 10.2, 13.3, 16, 16.1); fl('tile', 11.8, 16.1, 16, 21.4); fl('tile', 19.9, 19.2, 23.8, 21.4);
   fl('stone', 16, 8, 19.8, 11.8);
 
-  // --- gevels (sandwichpanelen) ; ops = [a,b,z0,z1,type]
-  const ext = { ext: true };
-  wall('panel', 0, 0, 10.3, 0, 0, VA.e, ST, [], ext); profileWall('panel', 0, -0.05, 10.35, VA.e - 0.01, ST, VA);   // kopgevel A (weg)
-  wall('panel', 10.3, 0, 10.3, 8, 0, VA.e, ST, [[0.25, 3.75, 0, 4.2, 'sect'], [4.25, 7.75, 0, 4.2, 'sect']], ext); // 2 overheaddeuren
-  wall('panel', 10.3, 8, 10.3, 24, VA.e, VB.e, ST, [], { plan: false });
-  wall('panel', 10.3, 8, 25, 8, 0, VB.e, ST, [
+  // --- gevels (sandwichpanelen): alleen glas bij de entree ; ops = [a,b,z0,z1,type]
+  const ext = { ext: true }, R0 = ROWS[0];
+  wall('panel', 0, 0, 10.3, 0, 0, R0.e, ST, [], ext);                                                         // voorgevel blok A (neonlogo)
+  wall('panel', 10.3, 0, 10.3, 8, 0, R0.e, ST, [[0.25, 3.75, 0, 4.2, 'sect'], [4.25, 7.75, 0, 4.2, 'sect']], ext); // laad- en losdeuren
+  wall('panel', 10.3, 8, 25, 8, 0, EAVE, ST, [
     [16.1, 17.0, 0.05, 2.9, 'win'], [17.0, 18.8, 0, 2.6, 'auto'], [18.8, 19.7, 0.05, 2.9, 'win'], // entree
-    [16.1, 19.7, 3.1, 6.6, 'win']                         // glas tot boven, boven de entree
-  ], ext); profileWall('panel', 8, 10.25, 25.05, VB.e - 0.01, ST, VB);
-  wall('panel', 25, 8, 25, 16, 0, VB.e, ST, [], ext);
-  wall('panel', 25, 16, 40, 16, 0, VC.e, ST, [], ext);
-  profileWall('panel', 16, 24.95, 40.05, VC.e - 0.01, ST, VC);
-  wall('panel', 40, 16, 40, 24, 0, VC.e, ST, [[16.3, 17.7, 0, 2.5, 'auto'], [18.0, 22.6, 0.3, 2.8, 'win'], [17.2, 19.6, 4.0, 6.3, 'win'], [20.3, 22.4, 4.0, 6.3, 'win'], [22.95, 23.9, FL1, 5.4, 'door']], ext);
-  wall('panel', 0, 24, 10.3, 24, 0, VA.e, ST, [], ext); wall('panel', 10.3, 24, 25, 24, 0, VB.e, ST, [[12.9, 14.9, 0, 2.6, 'auto']], ext); wall('panel', 25, 24, 40, 24, 0, VC.e, ST, [[25.4, 26.4, 0, 2.3, 'door'], [30.4, 31.4, 0, 2.3, 'door']], ext);
-  for (const v of VOLS) profileWall('panel', 24, v.x0, v.x1, v.e - 0.01, ST, v);
-  wall('panel', 0, 0, 0, 24, 0, VA.e, ST, [], ext);
+    [16.1, 19.7, 3.1, 6.6, 'win']                         // glas tot boven
+  ], ext);
+  wall('panel', 25, 8, 25, 16, 0, EAVE, ST, [], ext);
+  wall('panel', 25, 16, 40, 16, 0, EAVE, ST, [], ext);
+  wall('panel', 40, 16, 40, 24, 0, EAVE, ST, [[22.95, 23.9, FL1, 5.4, 'door']], ext);                    // nooddeur B2 naar buitentrap
+  wall('panel', 0, 24, 40, 24, 0, EAVE, ST, [[12.9, 14.9, 0, 2.6, 'auto'], [25.4, 26.4, 0, 2.3, 'door'], [30.4, 31.4, 0, 2.3, 'door']], ext);
+  wall('panel', 0, 0, 0, 8, 0, R0.e, ST, [], ext); wall('panel', 0, 8, 0, 24, 0, EAVE, ST, [], ext);
   // plint
   box('trim', -0.14, -0.14, 0, 10.44, 0, 0.35); box('trim', 10.3, -0.14, 0, 10.44, 8, 0.35); box('trim', 10.3, 7.86, 0, 16.0, 8.14, 0.35);
-  box('trim', -0.14, 0, 0, 0, 24, 0.35); box('trim', 25, 15.86, 0, 31, 16.14, 0.35);
-  // afscheidingswand goederen / techn. dienst
-  wall('panel', 0, 8, 10.3, 8, 0, VA.e, 0.2, [[1.2, 2.2, 0, 2.4, 'door']]); profileWall('plaster', 8, 0, 10.3, VA.e - 0.01, 0.2, VA);
-
-  // --- daken: zadeldaken met nok van voor naar achter + kantplanken + goten
-  for (const v of VOLS) {
-    const xm = (v.x0 + v.x1) / 2, ya = v.y0 - 0.2, yb = v.y1 + 0.2, yc = (ya + yb) / 2;
-    beam('roof', W(v.x0 - 0.12, yc, v.e + 0.06), W(xm, yc, v.r + 0.09), yb - ya, 0.16);
-    beam('roof', W(xm, yc, v.r + 0.09), W(v.x1 + 0.12, yc, v.e + 0.06), yb - ya, 0.16);
-    box('trim', xm - 0.2, ya, v.r + 0.1, xm + 0.2, yb, v.r + 0.22); // nokafdekking
-    for (const yg of [ya, yb]) { beam('trim', W(v.x0 - 0.14, yg, v.e + 0.02), W(xm, yg, v.r + 0.12), 0.32, 0.06); beam('trim', W(xm, yg, v.r + 0.12), W(v.x1 + 0.14, yg, v.e + 0.02), 0.32, 0.06); }
-    for (let y = v.y0 + 4; y < v.y1 - 0.5; y += 4) { beam('steel', W(v.x0 + 0.15, y, v.e - 0.25), W(xm, y, v.r - 0.25), 0.32, 0.14); beam('steel', W(xm, y, v.r - 0.25), W(v.x1 - 0.15, y, v.e - 0.25), 0.32, 0.14); }
+  box('trim', -0.14, 0, 0, 0, 24, 0.35); box('trim', 25, 8, 0, 25.14, 16, 0.35); box('trim', 25, 15.86, 0, 40, 16.14, 0.35); box('trim', 40, 16, 0, 40.14, 24, 0.35);
+  // tussenwand goederen / techn. dienst (loopt door tot de hogere goot van beuk 2)
+  wall('panel', 0, 8, 10.3, 8, 0, EAVE, 0.2, [[1.2, 2.2, 0, 2.4, 'door']]);
+  // topgevels
+  for (const r of ROWS) { gableX('panel', 0, r.y0, r.y1, r.e, r.r, ST); gableX('panel', r.x1, r.y0, r.y1, r.e, r.r, ST); }
+  // --- daken (zadeldaken per beuk) + kantplanken + goten
+  for (const r of ROWS) {
+    const ym = (r.y0 + r.y1) / 2, xa = r.x0 - 0.2, xb = r.x1 + 0.2, xc = (xa + xb) / 2;
+    beam('roof', W(xc, r.y0 - 0.08, r.e + 0.06), W(xc, ym, r.r + 0.09), xb - xa, 0.16);
+    beam('roof', W(xc, ym, r.r + 0.09), W(xc, r.y1 + 0.08, r.e + 0.06), xb - xa, 0.16);
+    box('trim', xa, ym - 0.2, r.r + 0.1, xb, ym + 0.2, r.r + 0.22);
+    for (const xg of [xa, xb]) { beam('trim', W(xg, r.y0 - 0.1, r.e + 0.02), W(xg, ym, r.r + 0.12), 0.06, 0.32); beam('trim', W(xg, ym, r.r + 0.12), W(xg, r.y1 + 0.1, r.e + 0.02), 0.06, 0.32); }
+    for (let x = 5; x < r.x1 - 0.5; x += 5) { beam('steel', W(x, r.y0 + 0.15, r.e - 0.25), W(x, ym, r.r - 0.25), 0.14, 0.32); beam('steel', W(x, ym, r.r - 0.25), W(x, r.y1 - 0.15, r.e - 0.25), 0.14, 0.32); }
   }
-  box('trim', -0.32, -0.2, VA.e - 0.25, 0.02, 24.2, VA.e + 0.1); box('trim', 10.28, -0.2, VA.e - 0.25, 10.62, 8, VA.e + 0.1);
-  box('trim', 24.98, 8 - 0.2, VB.e - 0.25, 25.32, 16, VB.e + 0.1); box('trim', 39.98, 16 - 0.2, VC.e - 0.25, 40.32, 24.2, VC.e + 0.1);
-  box('alu', 10.05, 8, VA.e + 0.0, 10.45, 24, VA.e + 0.12); box('alu', 24.75, 16, VB.e - 0.02, 25.25, 24, VB.e + 0.08); // kilgoten
-  for (const [x, y] of [[10.3, 12], [10.3, 16.05], [10.3, 20], [25.05, 20]]) box('steel', x - 0.12, y - 0.12, 0, x + 0.12, y + 0.12, x < 11 ? VA.e : VB.e, { col: true });
-  box('steel', 10.15, 8, VA.e - 0.4, 10.45, 24, VA.e - 0.02); box('steel', 24.9, 16, VB.e - 0.4, 25.2, 24, VB.e - 0.02);
+  box('trim', -0.2, -0.3, R0.e - 0.25, 10.5, 0.05, R0.e + 0.1); box('trim', 10.3, 7.7, EAVE - 0.25, 25.2, 8.05, EAVE + 0.1);
+  box('trim', 25, 15.7, EAVE - 0.25, 40.2, 16.05, EAVE + 0.1); box('trim', -0.2, 23.95, EAVE - 0.25, 40.2, 24.3, EAVE + 0.1);
+  box('alu', 0, 7.75, R0.e + 0.0, 10.3, 8.0, R0.e + 0.12); box('alu', 0, 15.75, EAVE - 0.05, 25, 16.25, EAVE + 0.05); // kilgoten
+  for (const [x, y] of [[5, 16], [10, 16], [15, 16], [25, 16], [5, 8], [10, 8]]) box('steel', x - 0.12, y - 0.12, 0, x + 0.12, y + 0.12, EAVE, { col: true });
+  box('steel', 0, 15.85, EAVE - 0.45, 25, 16.15, EAVE - 0.05);
 
   // --- verdiepingsvloeren (+3200): opslag 0.20 en vloer 1.01/1.02 + bordes
   const slab = (x0, y0, x1, y1) => { box('concrete', x0, y0, CEIL + 0.02, x1, y1, FL1, { walk: true }); box('ceil', x0, y0, CEIL, x1, y1, CEIL + 0.02); };
@@ -872,9 +878,9 @@ function buildBuilding() {
   planLines.push({ hor: false, A: ys, B: ye, c: 18.12, ops: [], lvl: 0, glass: true, rail: true });
 
   // --- verdieping: 1.01, Presentatieruimte 1.02, opslag 0.20
-  wall('plaster', 19.6, 16, 19.6, 24, FL1, roofZ(VB, 19.6) - 0.06, PT, [[22.2, 23.2, FL1, 5.5, 'door']], { lvl: 1 });  // K
-  wall('plaster', 24.85, 16, 24.85, 24, FL1, roofZ(VB, 24.85) - 0.04, PT, [[22.1, 23.1, FL1, 5.5, 'door']], { lvl: 1 }); // I
-  glassWall(19.6, 16, 24.85, 16, FL1, EAVE - 0.05, [], 1); profileWall('plaster', 16, 19.6, 24.85, EAVE - 0.05, PT, VB);                                            // L
+  wall('plaster', 19.6, 16, 19.6, 24, FL1, EAVE, PT, [[22.2, 23.2, FL1, 5.5, 'door']], { lvl: 1 }); gableX('plaster', 19.6, 16, 24, EAVE, RIDGE - 0.15, PT);  // K
+  wall('plaster', 24.85, 16, 24.85, 24, FL1, EAVE, PT, [[22.1, 23.1, FL1, 5.5, 'door']], { lvl: 1 }); gableX('plaster', 24.85, 16, 24, EAVE, RIDGE - 0.15, PT); // I
+  glassWall(19.6, 16, 24.85, 16, FL1, EAVE - 0.05, [], 1);                                            // L
   rail(18.0, 21.6, 18.0, 24, FL1);
   rail(3.3, 8.1, 3.3, 21.4, FL1, 1.1, 'mesh'); rail(3.3, 21.4, 10.0, 21.4, FL1, 1.1, 'mesh'); rail(11.5, 21.4, 16, 21.4, FL1, 1.1, 'mesh'); rail(16, 8.1, 16, 21.4, FL1, 1.1, 'mesh');
   box('mesh', 10.0, 21.39, FL1, 11.5, 21.41, FL1 + 1.1); // hekwerk te openen
@@ -909,14 +915,12 @@ function buildBuilding() {
   palletStack(3, 6, 2); palletStack(4.6, 6.1, 1, 'crate'); palletStack(7.5, 5.6, 2, 'white'); rack(0.3, 4.15, 0.95, 7.7, 4.2, 3);
   palletStack(2.5, 1.8, 2, 'crate'); palletStack(4.2, 1.8, 3); palletStack(6.2, 2.2, 1); box('orange', 8.2, 5.5, 0.1, 8.9, 6.6, 1.2, { col: true }); box('black', 8.3, 5.4, 0, 8.4, 6.7, 0.12);
   // Entree 0.01: hygiëne-units, mat
-  { const R2 = 1.15, L = 2.1, y0 = 11.85, cxs = 17.9;
-    const tube = new THREE.CylinderGeometry(R2, R2, L, 40, 1, true); tube.rotateX(Math.PI / 2); tube.translate(cxs, R2 - 0.02, -(y0 + L / 2)); addGeo('inox', tube);
-    for (const yy of [y0, y0 + L]) { const ring = new THREE.TorusGeometry(R2 + 0.02, 0.045, 10, 48); ring.translate(cxs, R2 - 0.02, -yy); addGeo('inox', ring); }
-    box('inox', cxs - 0.95, y0, 0, cxs + 0.95, y0 + L, 0.05);                                    // roosterplaat
-    for (let y = y0 + 0.12; y < y0 + L - 0.1; y += 0.14) box('brush', cxs - 0.85, y, 0.05, cxs + 0.85, y + 0.07, 0.09); // schoenborstels in de vloer
-    for (const sx of [-1, 1]) box('brush', cxs + sx * 0.88 - 0.05, y0 + 0.1, 0.05, cxs + sx * 0.88 + 0.05, y0 + L - 0.1, 0.35);
-    for (const sx of [-1, 1]) colliders.push({ x0: cxs + sx * 1.0 - 0.06, x1: cxs + sx * 1.0 + 0.06, y0, y1: y0 + L, z0: 0, z1: 2.4, active: true });
-    box('led', cxs - 0.25, y0 + 0.5, 2.24, cxs + 0.25, y0 + L - 0.5, 2.25); }
+  // hygiënesluis: twee blauwe bakken, ertussen borstels in de vloer en een horizontaal buisje dat opendraait
+  for (const x of [16.75, 18.55]) { box('blue', x, 11.95, 0, x + 0.6, 13.75, 1.05, { col: true }); box('inox', x + 0.04, 11.99, 1.05, x + 0.56, 13.71, 1.09); box('black', x + 0.15, 12.3, 1.09, x + 0.45, 12.6, 1.1); }
+  box('inox', 17.35, 11.95, 0, 18.55, 13.75, 0.03);
+  for (let y = 12.05; y < 13.7; y += 0.13) box('brush', 17.42, y, 0.03, 18.48, y + 0.065, 0.075);
+  for (const x of [17.38, 18.45]) box('brush', x, 12.0, 0.03, x + 0.07, 13.7, 0.3);
+  hygArm(17.35, 12.75, 0.88, 1.15);
   box('black', 17.0, 8.3, 0.008, 18.8, 10.2, 0.02); sofa(16.15, 9.2, 16.7, 11.0, 'e');
   // Ontvangstruimte 0.03 — lange tafel, bank
   table(22.1, 9.6, 23.1, 14.0); chairsAround(22.1, 9.6, 23.1, 14.0, 'fabric'); bowl(22.6, 10.6, 0.75); bowl(22.6, 11.8, 0.75, 20, 0.2); bowl(22.6, 13.0, 0.75);
@@ -977,7 +981,7 @@ function buildNeon() {
 const GUT = 6.5, GRID = 7.45, SPAN = 5;
 // kas achter de bedrijfsruimte (loopt naar achteren), met een strook naast volume C tot aan de voorgevel
 const GH = { x0: 0, x1: 55, y0: 24, y1: 124 };
-const ghRegions = [{ x0: 0, x1: 55, y0: 24, y1: 124 }, { x0: 40, x1: 55, y0: 16, y1: 24 }];
+const ghRegions = [{ x0: 0, x1: 55, y0: 24, y1: 120 }];
 const instanced = [];
 function inst(geo, mat, n, cast = false) { const m = new THREE.InstancedMesh(geo, mat, n); m.castShadow = cast; m.receiveShadow = true; scene.add(m); instanced.push(m); return m; }
 const ghLampMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xffb050, emissiveIntensity: 0, roughness: 0.5 });
@@ -1028,13 +1032,12 @@ function buildGreenhouse() {
     for (let a = A + 1.25; a < B; a += 1.25) if (!doors.some(d => a > d[0] - 0.1 && a < d[1] + 0.1)) { if (hor) box('alu', a - 0.02, c - 0.03, 0.6, a + 0.02, c + 0.03, GUT); else box('alu', c - 0.03, a - 0.02, 0.6, c + 0.03, a + 0.02, GUT); }
     planLines.push({ hor, A, B, c, ops: doors.map(d => [d[0], d[1], 0, 3, 'open']), lvl: 0, glass: true, gh: true });
   };
-  side(0, 24, 0, 124); side(0, 124, 55, 124); side(55, 16, 55, 124); side(40, 16, 55, 16);
-  for (const [y, xa, xb] of [[124, 0, 55], [16, 40, 55]]) for (let x = xa; x < xb - 0.01; x += SPAN) poly('ghGlass', [W(x, y, GUT), W(x + SPAN, y, GUT), W(x + SPAN / 2, y, GRID)]);
+  side(0, 24, 0, 120); side(0, 120, 55, 120); side(55, 24, 55, 120); side(40, 24, 55, 24);
+  for (const [y, xa, xb] of [[120, 0, 55], [24, 0, 55]]) for (let x = xa; x < xb - 0.01; x += SPAN) poly('ghGlass', [W(x, y, GUT), W(x + SPAN, y, GUT), W(x + SPAN / 2, y, GRID)]);
   // vloeren: paden beton, teelt op witte folie
-  box('concrete', 0, 24, -0.2, 55, 29, 0.0, {}); box('concrete', 0, 74, -0.2, 55, 77, 0.0); box('foil', 0, 29, -0.05, 55, 74, 0.003); box('foil', 0, 77, -0.05, 55, 124, 0.003);
-  box('concrete', 40, 16, -0.2, 55, 24, 0.0);
-  // proeftafels met jonge tomatenplanten in de strook naast volume C
-  for (const x of [47, 51.3]) { box('alu', x, 17.0, 0.7, x + 3.0, 22.6, 0.78, { col: true }); for (let xx = x + 0.2; xx < x + 2.9; xx += 0.42) for (let yy = 17.3; yy < 22.4; yy += 0.42) plantSpots.push([xx, yy, 0.78, 0.33, 'tray']); }
+  box('concrete', 0, 24, -0.2, 55, 29, 0.0, {}); box('concrete', 0, 74, -0.2, 55, 77, 0.0); box('foil', 0, 29, -0.05, 55, 74, 0.003); box('foil', 0, 77, -0.05, 55, 120, 0.003);
+  // proeftafels met jonge tomatenplanten aan het middenpad
+  for (const x of [2, 6.2, 10.4]) { box('alu', x, 74.4, 0.7, x + 3.0, 76.6, 0.78, { col: true }); for (let xx = x + 0.2; xx < x + 2.9; xx += 0.42) for (let yy = 74.6; yy < 76.5; yy += 0.42) plantSpots.push([xx, yy, 0.78, 0.33, 'tray']); }
 }
 // gewassen: tomaten aan de hoge draad, per vak een ander ras
 const TOMATO = [ // kleur, vruchtgrootte (m), tros-type
@@ -1089,7 +1092,7 @@ function buildCrops() {
     }
   };
   zone(0, 55, 29.5, 73.5);
-  zone(0, 55, 77.5, 123.5);
+  zone(0, 55, 77.5, 119.5);
   const pm = inst(new THREE.CylinderGeometry(0.026, 0.026, 1, 6), M.alu, pipes.length * 2, false);
   pipes.forEach(([x, y0, y1], i) => { for (const s2 of [-1, 1]) { mtx.compose(new THREE.Vector3(x + s2 * 0.28, 0.16, -(y0 + y1) / 2), new THREE.Quaternion().setFromAxisAngle(_upX, Math.PI / 2), new THREE.Vector3(1, y1 - y0, 1)); pm.setMatrixAt(i * 2 + (s2 > 0 ? 1 : 0), mtx); } });
   // potplanten & jonge tomatenplanten in trays
@@ -1124,6 +1127,21 @@ function crateRow(x0, x1, y, z, start = 0) { let k = start; for (let x = x0; x +
    ========================================================================== */
 const flags = [], steamEmitters = [];
 let water;
+const SITE = {};
+// vlakke strook langs een kromme (weg, sloot): plan-x/plan-y zitten in curve.x / curve.z
+function ribbon(key, curve, width, z, segs) {
+  const pts = curve.getSpacedPoints(segs), pos = [], nor = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], t = new THREE.Vector2(b.x - a.x, b.z - a.z).normalize(), n = new THREE.Vector2(t.y, -t.x).multiplyScalar(width / 2);
+    const t2 = i < pts.length - 2 ? new THREE.Vector2(pts[i + 2].x - b.x, pts[i + 2].z - b.z).normalize() : t, n2 = new THREE.Vector2(t2.y, -t2.x).multiplyScalar(width / 2);
+    const A = [a.x + n.x, z, -(a.z + n.y)], B = [a.x - n.x, z, -(a.z - n.y)], C = [b.x - n2.x, z, -(b.z - n2.y)], D = [b.x + n2.x, z, -(b.z + n2.y)];
+    pos.push(...A, ...D, ...C, ...A, ...C, ...B); for (let k = 0; k < 6; k++) nor.push(0, 1, 0);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2));
+  addGeo(key, g);
+}
+function dashes(curve, len, gap, z) { const L = curve.getLength(); for (let d = 0; d < L - len; d += len + gap) { const a = curve.getPointAt(d / L), b = curve.getPointAt((d + len) / L); beam('paint', W(a.x, a.z, z), W(b.x, b.z, z), 0.12, 0.006); } }
+function edgeLines(curve, off, z) { for (const sgn of [-1, 1]) { const pts = curve.getSpacedPoints(400); for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], t = new THREE.Vector2(b.x - a.x, b.z - a.z).normalize(); const nx = t.y * off * sgn, ny = -t.x * off * sgn; beam('paint', W(a.x + nx, a.z + ny, z), W(b.x + nx, b.z + ny, z), 0.1, 0.006); } } }
 function buildSite() {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.3; ground.receiveShadow = true;
   const uv = ground.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2400, uv.getY(i) * 2400); scene.add(ground);
@@ -1131,62 +1149,82 @@ function buildSite() {
   const paintX = (x0, x1, y, dash = 0) => { if (!dash) flat('paint', x0, y - 0.07, x1, y + 0.07, 0.012); else for (let x = x0; x < x1; x += dash * 2) flat('paint', x, y - 0.07, Math.min(x1, x + dash), y + 0.07, 0.012); };
   const paintY = (y0, y1, x, dash = 0) => { if (!dash) flat('paint', x - 0.07, y0, x + 0.07, y1, 0.012); else for (let y = y0; y < y1; y += dash * 2) flat('paint', x - 0.07, y, x + 0.07, Math.min(y1, y + dash), 0.012); };
 
-  // Hoge Noordweg: langs de voorkant, buigt bij de sloot af naar achteren
-  flat('asphalt', -400, -27, 96, -21); flat('asphalt', 90, -27, 97, 320);
-  paintX(-400, 88, -24, 3); paintY(-18, 320, 93.5, 3);
-  // weg tussen de kassen door (tussen het buurperceel en de nieuwbouw), naar achteren
-  flat('asphalt', -5.8, -21, -1.2, 420); paintY(-21, 420, -5.5); paintY(-21, 420, -1.5); box('grass', -1.2, -17, 0, 0, 420, 0.05);
-  // parkeerplein P (voor en rechts van het gebouw) + inrit
-  // parkeerplein: rechtsvoor rond naar achteren afgerond (volgt de sloot en de bocht in de weg)
-  { const sh = new THREE.Shape(); sh.moveTo(0, -14.5); sh.lineTo(28, -14.5); sh.bezierCurveTo(42, -14.5, 49, -9, 48.5, 1); sh.bezierCurveTo(48, 9, 45, 14.2, 40.2, 16);
-    sh.lineTo(25, 16); sh.lineTo(25, 8); sh.lineTo(10.3, 8); sh.lineTo(10.3, 0); sh.lineTo(0, 0); sh.closePath();
-    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false, curveSegments: 24 }); g.rotateX(-Math.PI / 2); g.translate(0, -0.02, 0); addGeo('asphalt', g);
-    // trottoirband langs de ronding
-    const pts = new THREE.CubicBezierCurve(new THREE.Vector2(28, -14.5), new THREE.Vector2(42, -14.5), new THREE.Vector2(49, -9), new THREE.Vector2(48.5, 1)).getPoints(20)
-      .concat(new THREE.CubicBezierCurve(new THREE.Vector2(48.5, 1), new THREE.Vector2(48, 9), new THREE.Vector2(45, 14.2), new THREE.Vector2(40.2, 16)).getPoints(14).slice(1));
-    for (let i = 0; i < pts.length - 1; i++) { const a2 = pts[i], b2 = pts[i + 1]; if (a2.x > 35.5 && a2.x < 42.5 && a2.y < -13) continue; beam('stone', W(a2.x, a2.y, 0.06), W(b2.x, b2.y, 0.06), 0.2, 0.12); } }
-  flat('asphalt', 36, -21, 42, -12);
-  flat('paving', 14.6, -3, 21.2, 8, 0.012); box('grass', 0, -17, 0, 36, -14.5, 0.05); box('grass', 42, -17, 0, 57, -14.5, 0.05);
-  box('grass', 21.6, -2.4, 0, 24.6, 0.6, 0.06); box('grass', 11.0, -2.4, 0, 14.2, 0.6, 0.06);
+  // ---- Hoge Noordweg: langs de voorkant en in een bocht langs de sloot naar achteren (zie dronefoto's)
+  const v2 = (x, y) => new THREE.Vector3(x, 0, y);
+  const roadC = new THREE.CatmullRomCurve3([v2(-400, -17), v2(-100, -17), v2(0, -17), v2(16, -17.2), v2(30, -15.6), v2(42, -9.4), v2(51, 0), v2(57, 9), v2(62, 17), v2(68, 25), v2(80, 31), v2(92, 37), v2(97, 48), v2(97, 120), v2(97, 330)], false, 'centripetal');
+  ribbon('asphalt', roadC, 6.4, 0, 700); SITE.road = roadC;
+  dashes(roadC, 3, 3, 0.012);
+  edgeLines(roadC, 3.0, 0.012);
+  // weg tussen de kassen door (één rijstrook), sluit aan op de Hoge Noordweg
+  flat('asphalt', -5.8, -14.2, -1.2, 420); paintY(-13.8, 420, -5.5); paintY(-13.8, 420, -1.5); flat('trim', -5.8, -13.0, -1.2, -10.2, 0.0); box('grass', -1.2, -9.5, 0, 0, 420, 0.05);
+  // ---- parkeerplein: ingeklemd tussen de trapsgewijze gevels en de sloot, rechtsvoor rond naar achteren
+  const e1 = new THREE.CubicBezierCurve(new THREE.Vector2(16, -9.5), new THREE.Vector2(30, -9.5), new THREE.Vector2(40, -3), new THREE.Vector2(46, 5));
+  const e2 = new THREE.CubicBezierCurve(new THREE.Vector2(46, 5), new THREE.Vector2(51, 11.5), new THREE.Vector2(55, 17), new THREE.Vector2(56, 24));
+  const edge = e1.getSpacedPoints(40).concat(e2.getSpacedPoints(30).slice(1)); SITE.edge = edge;
+  { const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0, -9.5); for (const p of edge) sh.lineTo(p.x, p.y); sh.lineTo(40.2, 24); sh.lineTo(40.2, 16); sh.lineTo(25, 16); sh.lineTo(25, 8); sh.lineTo(10.3, 8); sh.lineTo(10.3, 0); sh.closePath();
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, -0.02, 0); addGeo('asphalt', g); }
+  // inrit met duiker over de sloot
+  { const sh = new THREE.Shape(); sh.moveTo(20.5, -9.3); sh.lineTo(27, -9.0); sh.lineTo(27.6, -14.0); sh.lineTo(20.2, -14.3); sh.closePath(); const g = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, -0.015, 0); addGeo('asphalt', g); }
+  flat('paving', 14.6, -3, 21.2, 8, 0.012);
+  box('grass', 11.0, -2.4, 0, 14.2, 0.6, 0.06); box('grass', 21.6, -2.4, 0, 24.6, 0.6, 0.06);
+  // trottoirband + hekwerk + beplanting langs de ronding (onderbroken bij de inrit)
+  const off = (p, q, d) => { const t = new THREE.Vector2(q.x - p.x, q.y - p.y).normalize(); return new THREE.Vector2(p.x + t.y * d, p.y - t.x * d); };
+  const fenceSeg = (A, B) => { beam('mesh', W(A.x, A.y, 0.9), W(B.x, B.y, 0.9), 0.02, 1.8); beam('black', W(A.x, A.y, 1.8), W(B.x, B.y, 1.8), 0.05, 0.05); box('black', A.x - 0.03, A.y - 0.03, 0, A.x + 0.03, A.y + 0.03, 1.85);
+    colliders.push({ x0: Math.min(A.x, B.x) - 0.05, x1: Math.max(A.x, B.x) + 0.05, y0: Math.min(A.y, B.y) - 0.05, y1: Math.max(A.y, B.y) + 0.05, z0: 0, z1: 1.8, active: true }); };
+  for (let i = 0; i < edge.length - 1; i++) {
+    const a2 = edge[i], b2 = edge[i + 1];
+    beam('stone', W(a2.x, a2.y, 0.06), W(b2.x, b2.y, 0.06), 0.2, 0.12);
+    const fa = off(a2, b2, 0.6), fb = off(a2, b2, 0.6); const fb2 = off(b2, edge[Math.min(i + 2, edge.length - 1)] || b2, 0.6);
+    if (!(a2.x > 19.5 && a2.x < 27.5)) fenceSeg(fa, i < edge.length - 2 ? fb2 : off(a2, b2, 0.6).add(new THREE.Vector2(b2.x - a2.x, b2.y - a2.y)));
+    const h1 = off(a2, b2, 1.4); if (!(a2.x > 19.5 && a2.x < 27.5)) beam('leaf', W(h1.x, h1.y, 0.45), W(h1.x + (b2.x - a2.x), h1.y + (b2.y - a2.y), 0.45), 0.9, 0.9);
+  }
+  for (let x = -1.2; x < 16; x += 2) { if (x > 15) break; fenceSeg(new THREE.Vector2(x, -10.1), new THREE.Vector2(Math.min(16, x + 2), -10.1)); beam('stone', W(x, -9.5, 0.06), W(Math.min(16, x + 2), -9.5, 0.06), 0.2, 0.12); }
+  // parkeervakken
   const bays = [];
-  for (let x = 14.5; x < 33; x += 2.6) bays.push([x, -14.3, x + 2.5, -8.8, 's']);
-  for (let x = 25.2; x < 45; x += 2.6) bays.push([x, -3.4, x + 2.5, 2.1, 'n']);
-  for (let x = 26.0; x < 38; x += 2.6) bays.push([x, 10.2, x + 2.5, 15.7, 'n']);
-  // laadplekken voor elektrische auto's onder het neonlogo, met laadpalen
-  const ev = [[0.6, -6.0, 3.6, -0.5, 'n'], [3.7, -6.0, 6.7, -0.5, 'n'], [6.8, -6.0, 9.8, -0.5, 'n']];
-  for (const [x0, y0, x1, y1] of ev) { box('evpaint', x0 + 0.1, y0, 0.0, x1 - 0.1, y1, 0.014); }
-  for (const x of [3.65, 6.75, 0.6, 9.8]) { box('white', x - 0.16, -0.45, 0, x + 0.16, -0.25, 1.45, { col: true }); box('evled', x - 0.12, -0.46, 1.0, x + 0.12, -0.45, 1.3); box('black', x - 0.1, -0.46, 0.7, x + 0.1, -0.45, 0.9); }
-  for (const [x0, y0, x1] of [...bays, ...ev]) { paintY(y0, y0 + 5.5, x0); paintY(y0, y0 + 5.5, x1); }
-  buildCars([...bays.filter(() => rnd() < 0.62), ev[0], ev[2]]);
-  for (let x = 24; x < 44; x += 6.5) { if (x > 40) continue; box('pole', x - 0.06, -6.3, 0, x + 0.06, -6.18, 5.5, { col: true }); box('streetlamp', x - 0.4, -6.4, 5.4, x + 0.4, -6.1, 5.55); }
-  // hekwerk langs de weg
-  for (const [x0, x1] of [[-1.2, 36], [42, 57]]) { box('black', x0, -17.25, 1.75, x1, -17.15, 1.8); box('mesh', x0, -17.22, 0, x1, -17.18, 1.8, { col: true }); for (let x = x0; x <= x1; x += 2.5) box('black', x - 0.03, -17.23, 0, x + 0.03, -17.17, 1.85); }
-  // vlaggen bij de voorkant van volume A
+  for (let x = 25.6; x < 38; x += 2.6) bays.push([x, 10.4, x + 2.5, 15.9, 'n']);           // voor de gevel van beuk 3
+  bays.push([40.4, 16.4, 45.9, 18.9, 'w']); bays.push([40.4, 19.0, 45.9, 21.5, 'w']);        // langs de kopgevel van beuk 3
+  const ev = [[0.6, -5.0, 3.6, -0.2, 'n'], [3.7, -5.0, 6.7, -0.2, 'n'], [6.8, -5.0, 9.8, -0.2, 'n']]; // laadplekken onder het neonlogo
+  for (const [x0, y0, x1, y1] of ev) box('evpaint', x0 + 0.1, y0, 0.0, x1 - 0.1, y1, 0.014);
+  for (const x of [0.6, 3.65, 6.75, 9.8]) { box('white', x - 0.16, -0.05, 0, x + 0.16, 0.0, 1.45); box('white', x - 0.16, -0.45, 0, x + 0.16, -0.05, 1.45, { col: true }); box('evled', x - 0.12, -0.46, 1.0, x + 0.12, -0.45, 1.3); box('black', x - 0.1, -0.46, 0.7, x + 0.1, -0.45, 0.9); }
+  // schuine vakken langs de ronding (neus naar de sloot)
+  const ang = []; { let acc = 0, last = null; const pts = edge; for (let i = 1; i < pts.length; i++) { const d = pts[i].distanceTo(pts[i - 1]); acc += d; if (pts[i].x < 28 || pts[i].y > 14.5) { acc = 0; continue; } if (acc >= 2.6) { acc = 0; const t = new THREE.Vector2(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y).normalize(), n = new THREE.Vector2(t.y, -t.x); ang.push({ p: pts[i].clone(), t, n }); } } }
+  const angBays = [];
+  ang.forEach(({ p, t, n }, i) => {
+    const c = p.clone().addScaledVector(n, -2.95), rot = Math.atan2(-n.x, n.y);
+    angBays.push({ cx: c.x, cy: c.y, rot });
+    for (const s2 of [-1.3, 1.3]) { const a0 = p.clone().addScaledVector(t, s2).addScaledVector(n, -0.2), a1 = p.clone().addScaledVector(t, s2).addScaledVector(n, -5.6); beam('paint', W(a0.x, a0.y, 0.012), W(a1.x, a1.y, 0.012), 0.1, 0.006); }
+  });
+  for (const [x0, y0, x1, y1] of [...bays, ...ev]) { if (x1 - x0 < y1 - y0) { paintY(y0, y1, x0); paintY(y0, y1, x1); } else { paintX(x0, x1, y0); paintX(x0, x1, y1); } }
+  buildCars([...bays.filter(() => rnd() < 0.7), ev[0], ev[2], ...angBays.filter(() => rnd() < 0.65)]);
+  for (const [x, y] of [[29, 1], [38, 5], [22, -6.5], [33, 9]]) { box('pole', x - 0.06, y - 0.06, 0, x + 0.06, y + 0.06, 5.5, { col: true }); box('streetlamp', x - 0.4, y - 0.15, 5.4, x + 0.4, y + 0.15, 5.55); }
+  // vlaggen bij het entreeplein
   for (let i = 0; i < 3; i++) {
-    const x = 1.5 + i * 2.2, y = -15.8;
+    const x = 11.5 + i * 1.1, y = -1.0;
     box('pole', x - 0.05, y - 0.05, 0, x + 0.05, y + 0.05, 8.5, { col: true });
     const g = new THREE.PlaneGeometry(2.4, 1.5, 18, 8); g.translate(1.2, 0, 0);
     const c = document.createElement('canvas'); c.width = 512; c.height = 320; const cx = c.getContext('2d');
     cx.fillStyle = '#fff'; cx.fillRect(0, 0, 512, 320); { const lh = 440 * LOGO_H / LOGO_W; drawLogo(cx, 36, (320 - lh) / 2, lh); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const f = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.85 }));
-    f.position.set(x + 0.05, 7.6, -y); f.rotation.y = 0.35; f.castShadow = true; scene.add(f); flags.push({ mesh: f, base: g.attributes.position.array.slice(), ph: i * 1.3 });
+    f.position.set(x + 0.05, 7.6, -y); f.rotation.y = 0.35 + i * 0.1; f.castShadow = true; scene.add(f); flags.push({ mesh: f, base: g.attributes.position.array.slice(), ph: i * 1.3 });
   }
   // naamzuil bij de inrit
-  box('trim', 43.0, -20.5, 0, 43.5, -18.5, 2.6, { col: true });
-  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(42.99, -19.5, 1.35), -Math.PI / 2);
+  box('trim', 18.6, -11.2, 0, 19.1, -9.2, 2.6, { col: true });
+  canvasPlane(1.9, 2.4, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); drawLogo(g, w * 0.08, h * 0.08, w * 0.84 * LOGO_H / LOGO_W); g.fillStyle = LOGO_BLUE; g.font = `600 ${w * 0.07}px "IBM Plex Mono", monospace`; g.fillText('HOGE NOORDWEG 6A', w * 0.08, h * 0.5); g.fillStyle = '#2c3134'; g.fillRect(0, h * 0.9, w, h * 0.1); }, W(19.11, -10.2, 1.35), Math.PI / 2);
 
-  // water: sloot oost, sloot langs de weg, bassin achter het witte huis
+  // ---- water: sloot langs het terrein (in de bocht mee), langs de kas, langs de snelweg, en het bassin
   water = true;
-  const waters = [[57.2, -20, 59.8, 150], [-400, -35.5, 400, -32.5], [100, -21, 103, 320], [-1, 131, 60, 134]];
-  for (const [x0, y0, x1, y1] of waters) { box('water', x0, y0, 0.0, x1, y1, 0.012); box('grass', x0 - 0.7, y0 - 0.7, -0.02, x1 + 0.7, y1 + 0.7, 0.006); colliders.push({ x0, y0, x1, y1, z0: -1, z1: 5, active: true }); }
-  box('trim', 63, 42, 0, 92, 44, 1.6, { col: true }); box('trim', 63, 98, 0, 92, 100, 1.6, { col: true }); box('trim', 63, 42, 0, 65, 100, 1.6, { col: true }); box('trim', 90, 42, 0, 92, 100, 1.6, { col: true });
-  box('water', 65, 44, 0, 90, 98, 1.3); box('black', 65, 44, 0, 90, 98, 1.25);
-  // wit huis met bomen tussen kas en weg
-  box('houseWhite', 70, 16, 0, 78, 28, 4.2, { col: true });
-  { const s2 = new THREE.Shape(); s2.moveTo(69.6, 4.2); s2.lineTo(78.4, 4.2); s2.lineTo(74, 8.0); s2.closePath(); const g = new THREE.ExtrudeGeometry(s2, { depth: 12.8, bevelEnabled: false }); g.translate(0, 0, -28.4); addGeo('rooftile', g); }
-  for (const [x0, y0, x1, y1] of [[72, 15.98, 73.3, 16, 2.6], [75, 15.98, 76.3, 16]]) box('black', x0, y0 - 0.02, 1.0, x1, y1, 2.4);
-  box('trim', 77, 22, 0, 82, 26, 2.6, { col: true });
+  const ditchA = new THREE.CatmullRomCurve3([v2(-400, -11.6), v2(-1.5, -11.6), v2(19.8, -11.6)], false), ditchB = new THREE.CatmullRomCurve3([v2(27.8, -11.4), v2(36, -9.0), v2(43, -3.5), v2(49, 4), v2(54.5, 12), v2(58.2, 20), v2(58.6, 28), v2(58.6, 150)], false, 'centripetal');
+  for (const dc of [ditchA, ditchB]) { ribbon('grass', dc, 4.4, 0.006, 300); ribbon('water', dc, 2.6, 0.014, 300);
+    for (const p of dc.getSpacedPoints(Math.ceil(dc.getLength() / 2))) colliders.push({ x0: p.x - 1.0, x1: p.x + 1.0, y0: p.z - 1.0, y1: p.z + 1.0, z0: -1, z1: 5, active: true }); }
+  box('trim', 19.6, -13.9, -0.05, 28.0, -10.8, 0.0); // duiker
+  for (const [x0, y0, x1, y1] of [[-400, -35.5, 400, -32.5], [100, -21, 103, 320], [-1, 121, 60, 124]]) { box('water', x0, y0, 0.0, x1, y1, 0.012); box('grass', x0 - 0.7, y0 - 0.7, -0.02, x1 + 0.7, y1 + 0.7, 0.006); colliders.push({ x0, y0, x1, y1, z0: -1, z1: 5, active: true }); }
+  box('trim', 63, 48, 0, 90, 50, 1.6, { col: true }); box('trim', 63, 98, 0, 90, 100, 1.6, { col: true }); box('trim', 63, 48, 0, 65, 100, 1.6, { col: true }); box('trim', 88, 48, 0, 90, 100, 1.6, { col: true });
+  box('water', 65, 50, 0, 88, 98, 1.3); box('black', 65, 50, 0, 88, 98, 1.25);
+  // wit huis met bomen tussen de kashoek en de weg
+  box('houseWhite', 61, 32, 0, 69, 41, 4.2, { col: true });
+  { const s2 = new THREE.Shape(); s2.moveTo(60.6, 4.2); s2.lineTo(69.4, 4.2); s2.lineTo(65, 8.0); s2.closePath(); const g = new THREE.ExtrudeGeometry(s2, { depth: 9.8, bevelEnabled: false }); g.translate(0, 0, -41.4); addGeo('rooftile', g); }
+  box('black', 62.5, 31.95, 1.0, 63.8, 32, 2.4); box('black', 65.5, 31.95, 1.0, 66.8, 32, 2.4); box('trim', 68, 36, 0, 72, 39, 2.6, { col: true });
 
   // buren aan de westkant (bestaande locatie): kantoorvilla, grote grijze hal, eigen parkeerterrein, silo, kassen erachter
   flat('asphalt', -50, -21, -10.5, 14);
@@ -1222,11 +1260,11 @@ function buildSite() {
 
   // bomen
   const trees = [];
-  for (const [x, y] of [[66, 14], [68, 31], [80, 31], [83, 18], [62, 24], [86, 26], [64, 36]]) trees.push([x, y, 'big']);
+  for (const [x, y] of [[60.5, 30], [62, 44], [71, 43], [72, 33], [60.5, 37], [67, 46], [74, 40]]) trees.push([x, y, 'big']);
   for (let y = 40; y < 300; y += rr(6, 9)) trees.push([106 + rr(-0.5, 0.5), y, 'round']);
   for (let x = -300; x < 300; x += rr(9, 14)) trees.push([x, -40 + rr(-1, 1), 'round']);
   for (let x = 110; x < 260; x += rr(6, 8)) trees.push([x, 120 + rr(-1, 1), 'poplar']);
-  for (const [x, y] of [[-6, -25], [8, -30], [30, -30], [60, -10], [62, -2], [-52, -24], [-30, -24]]) trees.push([x, y, 'round']);
+  for (const [x, y] of [[-6, -25], [8, -26], [30, -26], [60, -12], [66, 4], [-52, -24], [-30, -24]]) trees.push([x, y, 'round']);
   buildTrees(trees);
   // woningen langs de wetering (noordoost)
   for (let y = 140; y < 300; y += rr(16, 22)) {
@@ -1252,7 +1290,8 @@ function buildSite() {
 const traffic = [];
 let trafficMesh = null;
 function buildTraffic() {
-  const lanes = [[-71, -1, 30], [-67.7, -1, 26], [-74.3, -1, 23], [-51.8, 1, 30], [-55.1, 1, 26], [-48.5, 1, 23], [-25.3, 1, 13], [-22.7, -1, 13]];
+  const lanes = [[-71, -1, 30], [-67.7, -1, 26], [-74.3, -1, 23], [-51.8, 1, 30], [-55.1, 1, 26], [-48.5, 1, 23]];
+  for (let k = 0; k < 3; k++) traffic.push({ local: true, u: rnd(), dir: k % 2 ? 1 : -1, sp: 12, truck: k === 2 });
   traffic.push({ side: true, x: -3.5, y: 120, dir: 1, sp: 8, truck: false });
   for (const [y, dir, sp] of lanes) for (let k = 0; k < (y > -30 ? 2 : 4); k++) { const truck = y < -30 && rnd() < 0.3; traffic.push({ y, dir, sp: sp * rr(0.85, 1.1), x: rr(-500, 500), truck }); }
   trafficMesh = inst(new RoundedBoxGeometry(1, 1, 1, 2, 0.12), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.5 }), traffic.length, true);
@@ -1265,6 +1304,7 @@ function updateTraffic(dt) {
   if (!trafficMesh) return;
   traffic.forEach((v, i) => {
     const L = v.truck ? (v.side ? 9 : 13) : 4.5, H = v.truck ? 3.4 : 1.5, Wd = v.truck ? 2.5 : 1.85;
+    if (v.local && SITE.road) { const L2 = SITE.road.getLength(); v.u = (v.u + v.dir * v.sp * dt / L2 + 1) % 1; const p = SITE.road.getPointAt(v.u), tg = SITE.road.getTangentAt(v.u); const sideOff = v.dir > 0 ? -1.6 : 1.6; const nx = tg.z * sideOff, ny = -tg.x * sideOff; _tq.setFromAxisAngle(_up, Math.atan2(tg.x, tg.z)); _tm.compose(_tp.set(p.x + nx, H / 2 + 0.3, -(p.z + ny)), _tq, _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
     if (v.side) { v.y += v.dir * v.sp * dt; if (v.y > 420) v.y = -20; if (v.y < -20) v.y = 420; _tm.compose(_tp.set(v.x, H / 2 + 0.3, -v.y), _tq.identity(), _ts.set(Wd, H, L)); trafficMesh.setMatrixAt(i, _tm); return; }
     v.x += v.dir * v.sp * dt; if (v.x > 520) v.x = -520; if (v.x < -520) v.x = 520;
     if (v.y > -30 && v.x > 90) v.x = v.dir > 0 ? -400 : 88;
@@ -1279,14 +1319,17 @@ function buildCars(bays) {
   const wheel = inst(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 16), new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8 }), n * 4, false);
   const cols = [0xf4f4f4, 0xf4f4f4, 0x111315, 0x2a2d31, 0x8f969c, 0xc9ced2, 0x1d2b46, 0x5a1e1e, 0xf4f4f4];
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
-  bays.forEach(([x0, y0, x1, y1, face], i) => {
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rot = (face === 'e' || face === 'w') ? Math.PI / 2 : 0; q.setFromAxisAngle(_up, rot + rr(-0.03, 0.03));
+  bays.forEach((bay, i) => {
+    let cx, cy, rot, face;
+    if (Array.isArray(bay)) { const [x0, y0, x1, y1] = bay; face = bay[4]; cx = (x0 + x1) / 2; cy = (y0 + y1) / 2; rot = (face === 'e' || face === 'w') ? Math.PI / 2 : 0; }
+    else { cx = bay.cx; cy = bay.cy; rot = bay.rot; face = 'n'; }
+    q.setFromAxisAngle(_up, rot + rr(-0.03, 0.03));
     mtx.compose(new THREE.Vector3(cx, 0.72, -cy), q, new THREE.Vector3(1, 1, 1)); body.setMatrixAt(i, mtx); c.set(pick(cols)); body.setColorAt(i, c);
     const sh = (face === 'n' ? 0.25 : face === 's' ? -0.25 : 0);
     const off = new THREE.Vector3(0, 0, -sh).applyQuaternion(q);
     mtx.compose(new THREE.Vector3(cx + off.x, 1.28, -cy + off.z), q, new THREE.Vector3(1, 1, 1)); cab.setMatrixAt(i, mtx);
     let k = 0; for (const a of [-0.82, 0.82]) for (const b of [-1.45, 1.45]) { const o = new THREE.Vector3(a, 0, b).applyQuaternion(q); const wq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2).premultiply(q); mtx.compose(new THREE.Vector3(cx + o.x, 0.34, -cy + o.z), wq, new THREE.Vector3(1, 1, 1)); wheel.setMatrixAt(i * 4 + k++, mtx); }
-    const hx = rot ? 2.3 : 0.95, hy = rot ? 0.95 : 2.3; colliders.push({ x0: cx - hx, x1: cx + hx, y0: cy - hy, y1: cy + hy, z0: 0, z1: 1.6, active: true });
+    const sr = Math.abs(Math.sin(rot)), cr = Math.abs(Math.cos(rot)); const hx = 0.95 * cr + 2.3 * sr, hy = 0.95 * sr + 2.3 * cr; colliders.push({ x0: cx - hx, x1: cx + hx, y0: cy - hy, y1: cy + hy, z0: 0, z1: 1.6, active: true });
   });
 }
 function buildTrees(list) {
@@ -1405,9 +1448,9 @@ const ROOMS = [
 ];
 const OUT = [
   { n: 'Kas', c: 'tomaten', r: ghRegions.map(R => [R.x0, R.y0, R.x1, R.y1]) },
-  { n: 'Parkeerplein', c: 'P', r: [[0, -14.5, 46, 8], [25, 8, 40.2, 16]] },
+  { n: 'Parkeerplein', c: 'P', r: [[0, -9.5, 30, 0], [10.3, 0, 46, 8], [25, 8, 52, 16], [40, 16, 56, 24]] },
   { n: 'Weg tussen de kassen', c: 'weg', r: [[-5.8, -21, -1.2, 420]] },
-  { n: 'Hoge Noordweg', c: 'weg', r: [[-400, -27, 97, -21], [90, -27, 97, 320]] },
+  { n: 'Hoge Noordweg', c: 'weg', r: [[-400, -19.5, 18, -12.5]] },
 ];
 function roomAt(x, y, lvl) {
   for (const R of ROOMS) if (R.l === lvl) for (const r of R.r) if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]) return R;
@@ -1415,10 +1458,10 @@ function roomAt(x, y, lvl) {
   return { n: 'Buitenterrein', c: 'Westland' };
 }
 const GOTO = [
-  ['Parkeerplein', 30, -8, 0, 300], ['Entree (rieten luifel)', 17.9, 0.5, 0, 0], ['Ontvangstruimte', 21.0, 14.8, 0, 160], ['Hal', 17.2, 15.2, 0, 10],
+  ['Parkeerplein', 33, 4, 0, 300], ['Entree (rieten luifel)', 17.9, 0.5, 0, 0], ['Ontvangstruimte', 21.0, 14.8, 0, 160], ['Hal', 17.2, 15.2, 0, 10],
   ['Kantine', 15.2, 12.6, 0, 225], ['Teeltkantoor', 7.9, 17.0, 0, 300], ['Spreekkamer 1', 29.4, 19.0, 0, 300], ['Demoruimte (tomatenrassen)', 33.0, 19.6, 0, 90],
   ['Presentatieruimte (verd.)', 38.5, 22.6, FL1, 245], ['Ruimte 1.01 (verd.)', 20.2, 17.0, FL1, 40], ['Technische dienst', 6.0, 11.0, 0, 90], ['Goederenontvangst', 9.4, 4.8, 0, 300],
-  ['Kas — tussen de tomaten', 48.0, 30.0, 0, 0], ['Kas — middenpad', 20, 26.5, 0, 90], ['Kas — kopgevel', 47.9, 18.5, 0, 0], ['Laadpalen en neonlogo', 5.2, -12, 0, 0], ['Laad- en losdeuren', 16, 4, 0, 270],
+  ['Kas — tussen de tomaten', 48.0, 30.0, 0, 0], ['Kas — middenpad', 20, 26.5, 0, 90], ['Kas — glazen voorgevel', 47.9, 26.5, 0, 180], ['Laadpalen en neonlogo', 5.2, -7.5, 0, 0], ['Laad- en losdeuren', 16, 4, 0, 270],
 ];
 
 /* ==========================================================================
@@ -1433,9 +1476,11 @@ function drawPlans() {
     const g = mapCanvas[lvl].getContext('2d'), s = MAPB.s; g.fillStyle = '#121816'; g.fillRect(0, 0, mapCanvas[lvl].width, mapCanvas[lvl].height);
     // kas
     g.fillStyle = 'rgba(143,191,106,.10)'; for (const R of ghRegions) { const [a, b] = mpx(R.x0, R.y1); g.fillRect(a, b, (R.x1 - R.x0) * s, (R.y1 - R.y0) * s); }
-    g.strokeStyle = 'rgba(143,191,106,.22)'; g.lineWidth = 2; for (const [yy0, yy1] of [[29.5, 73.5], [77.5, 123.5]]) for (let x = 0.8; x < 54.5; x += 1.6) { const [a, b] = mpx(x, yy1), [, d] = mpx(x, yy0); g.beginPath(); g.moveTo(a, b); g.lineTo(a, d); g.stroke(); }
-    g.fillStyle = '#262c2a'; for (const r of [[0, -14.5, 46, 8], [25, 8, 40.2, 16], [-5.8, -21, -1.2, 420], [-400, -27, 97, -21], [90, -27, 97, 320]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
-    g.fillStyle = '#2b4c55'; for (const r of [[57.2, -20, 59.8, 150]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
+    g.strokeStyle = 'rgba(143,191,106,.22)'; g.lineWidth = 2; for (const [yy0, yy1] of [[29.5, 73.5], [77.5, 119.5]]) for (let x = 0.8; x < 54.5; x += 1.6) { const [a, b] = mpx(x, yy1), [, d] = mpx(x, yy0); g.beginPath(); g.moveTo(a, b); g.lineTo(a, d); g.stroke(); }
+    g.fillStyle = '#262c2a'; for (const r of [[-5.8, -14, -1.2, 420]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
+    if (SITE.edge) { g.beginPath(); let [a, b] = mpx(0, 0); g.moveTo(a, b); [a, b] = mpx(0, -9.5); g.lineTo(a, b); for (const p of SITE.edge) { [a, b] = mpx(p.x, p.y); g.lineTo(a, b); } for (const [x, y] of [[40.2, 24], [40.2, 16], [25, 16], [25, 8], [10.3, 8], [10.3, 0]]) { [a, b] = mpx(x, y); g.lineTo(a, b); } g.closePath(); g.fill(); }
+    if (SITE.road) { g.strokeStyle = '#262c2a'; g.lineWidth = 6.4 * s; g.beginPath(); SITE.road.getSpacedPoints(300).forEach((p, i) => { const [a, b] = mpx(p.x, p.z); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.stroke(); }
+    
     // gebouw
     g.fillStyle = '#e9ece6'; for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); }
     if (lvl === 1) { g.fillStyle = 'rgba(18,24,22,.55)'; for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } g.fillStyle = '#e9ece6'; for (const r of [[3.3, 8, 16, 21.4], [18, 21.6, 19.6, 24], [19.6, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } }
@@ -1450,7 +1495,7 @@ function drawPlans() {
     // labels
     g.fillStyle = '#2a3330'; g.textAlign = 'center';
     for (const R of ROOMS) if (R.l === lvl && R.r[0][2] - R.r[0][0] > 2) { const r = R.r[0]; const [a, b] = mpx((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); g.font = '600 13px Archivo, Arial'; g.fillText(R.n, a, b); g.font = '11px "IBM Plex Mono", monospace'; g.fillStyle = '#9a6a1f'; g.fillText(R.c + (R.a ? ' · ' + R.a + ' m²' : ''), a, b + 14); g.fillStyle = '#2a3330'; }
-    g.fillStyle = 'rgba(200,225,190,.75)'; g.font = '600 18px Archivo, Arial'; if (lvl === 0) { let [a, b] = mpx(27, 76); g.fillText('TOMATENKAS', a, b); [a, b] = mpx(38, -6); g.fillStyle = 'rgba(238,241,236,.6)'; g.fillText('P', a, b); [a, b] = mpx(20, -24); g.fillText('HOGE NOORDWEG', a, b); g.fillStyle = 'rgba(238,241,236,.35)'; [a, b] = mpx(-28, -4); g.fillText('BUREN', a, b); [a, b] = mpx(-3.5, 100); g.save(); g.translate(a, b); g.rotate(-Math.PI / 2); g.fillText('WEG', 0, 0); g.restore(); }
+    g.fillStyle = 'rgba(200,225,190,.75)'; g.font = '600 18px Archivo, Arial'; if (lvl === 0) { let [a, b] = mpx(27, 76); g.fillText('TOMATENKAS', a, b); [a, b] = mpx(34, 3); g.fillStyle = 'rgba(238,241,236,.6)'; g.fillText('P', a, b); [a, b] = mpx(-14, -20); g.fillText('HOGE NOORDWEG', a, b); g.fillStyle = 'rgba(238,241,236,.35)'; [a, b] = mpx(-28, -4); g.fillText('BUREN', a, b); [a, b] = mpx(-3.5, 100); g.save(); g.translate(a, b); g.rotate(-Math.PI / 2); g.fillText('WEG', 0, 0); g.restore(); }
   }
 }
 function drawMinimap(x, y, yaw, lvl) {
@@ -1524,17 +1569,17 @@ const SHOTS = [
   { t: 'Nieuwbouw bedrijfsruimte', s: 'Bedrijfsruimte met de tomatenkas erachter — Hoge Noordweg 6a, Naaldwijk', d: 11, cut: true,
     p: [W(78, -92, 68), W(64, -80, 54), W(50, -64, 40)], q: [W(26, 50, 0), W(25, 38, 0), W(22, 20, 3)] },
   { t: 'Parkeerplein en entree', s: 'Entree onder een puntig rieten dak; links de laad- en losdeuren, op de kopgevel het neonlogo', d: 10, cut: true,
-    p: [W(46, -14, 9), W(32, -9, 4.6), W(17.9, -3, 2.2), W(17.9, 6.5, 1.75)], q: [W(14, 6, 4.5), W(17, 7, 3.6), W(17.9, 10, 2.0), W(17.9, 14, 1.75)] },
-  { t: 'Entree 0.01', s: 'Hygiënesluis: een buis met schoenborstels in de vloer — daarachter de hal', d: 7,
+    p: [W(42, -6, 9), W(31, -3, 4.6), W(17.9, -3, 2.2), W(17.9, 6.5, 1.75)], q: [W(14, 6, 4.5), W(17, 7, 3.6), W(17.9, 10, 2.0), W(17.9, 14, 1.75)] },
+  { t: 'Entree 0.01', s: 'Hygiënesluis: blauwe bakken, schoenborstels in de vloer en een buisje dat opendraait — daarachter de hal', d: 7,
     p: [W(17.9, 6.5, 1.75), W(17.9, 10.5, 1.7), W(17.9, 13.4, 1.7), W(20.2, 14.6, 1.9)], q: [W(17.9, 14, 1.75), W(17.9, 18, 1.7), W(21, 16, 2.0), W(25, 10, 2.8)] },
   { t: 'Ontvangstruimte 0.03', s: 'Dubbelhoge ruimte met daglicht door de glazen entreegevel; op tafel schalen met tomaten', d: 9,
     p: [W(20.2, 14.6, 1.9), W(21.6, 15.2, 2.6), W(23.2, 15.0, 3.6)], q: [W(22.6, 9, 1.2), W(20, 9, 3.2), W(18, 8.5, 5.2)] },
   { t: 'Hal 0.02', s: 'Open hal met keukeneiland; de trap voert naar de verdieping op +3200', d: 11,
     p: [W(22.6, 15.0, 3.0), W(21.0, 15.6, 1.9), W(18.8, 16.2, 1.72), W(18.8, 18.5, 2.9), W(18.8, 21.2, 4.6), W(18.9, 22.8, 4.9)], q: [W(17, 20, 2.0), W(18.8, 20, 2.2), W(18.8, 22, 3.0), W(18.8, 24, 4.4), W(19, 24, 4.9), W(22, 22.8, 4.9)] },
-  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes, ramen naar de kas', d: 11,
+  { t: 'Presentatieruimte 1.02', s: '15,2 × 8,0 m op de verdieping: tomatenrassen in kistjes en een groot scherm', d: 11,
     p: [W(18.9, 22.8, 4.9), W(21.5, 22.7, 4.9), W(26.5, 22.2, 4.95), W(32, 21.2, 5.0), W(36.5, 20.6, 5.0)], q: [W(22, 22.8, 4.9), W(25, 22.6, 4.9), W(30, 19, 4.8), W(37.5, 18, 4.6), W(42, 20.6, 4.5)] },
   { t: 'De tomatenkas', s: 'Tomatenplanten aan de hoge draad — per vak een ander ras: rood, geel, oranje, bruin en cherry', d: 12,
-    p: [W(36.5, 20.6, 5.0), W(41.5, 20.6, 4.6), W(48.0, 26.0, 2.6), W(48.0, 36.0, 1.5), W(48.0, 54.0, 1.45)], q: [W(42, 20.6, 4.5), W(48, 28, 3.0), W(48, 40, 1.5), W(48, 60, 1.3), W(48, 76, 1.3)] },
+    p: [W(28, 26.5, 3.4), W(42, 26.6, 2.6), W(48.0, 30.0, 1.6), W(48.0, 40.0, 1.5), W(48.0, 56.0, 1.45)], q: [W(44, 26.6, 2.6), W(48, 32, 2.0), W(48, 44, 1.5), W(48, 60, 1.3), W(48, 76, 1.3)], cut: true },
   { t: 'Totaalbeeld', s: 'Bedrijfsruimte en kas als één geheel in het Westlandse kassengebied', d: 14, cut: true,
     p: [W(95, 60, 26), W(115, -20, 55), W(70, -100, 80), W(-10, -115, 90)], q: [W(28, 70, 3), W(28, 55, 0), W(25, 40, 0), W(25, 40, 0)] },
 ];
@@ -1863,7 +1908,7 @@ function frame() {
   }
   if (water) { T.waterN.offset.x = t * 0.004; T.waterN.offset.y = t * 0.0025; }
   if (steam) steam.material.uniforms.uTime.value = t;
-  updateTraffic(dt); updateSectDoors(dt);
+  updateTraffic(dt); updateSectDoors(dt); updateHyg(dt);
   finish.uniforms.uTime.value = t % 10;
   updateShadow();
   cullCrops();
