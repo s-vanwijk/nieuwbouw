@@ -191,6 +191,15 @@ body.picking #stage canvas{cursor:crosshair}
 #cfgPanel footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
 #cfgPanel footer .fb-status{margin:0;width:100%}
 body.editing #stage canvas{cursor:pointer}
+body.placing #stage canvas{cursor:copy}
+.cfg-tabs{display:flex;gap:2px;padding:0 10px 10px}
+.cfg-tabs .btn{padding:6px 10px;font-size:12.5px}
+.cfg-act{display:grid;gap:8px;padding-top:10px}
+.cfg-hint{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.cat-opt svg{width:26px;height:26px;color:var(--amp)}
+.ov-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ov-list li{border:1px solid var(--line);border-radius:8px;padding:9px;display:grid;gap:5px;background:rgba(255,255,255,.02)}
+#cfgBody .fb-meta{margin:0}
 @media (max-width:720px){ #cfgPanel{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:52%} }
 @media (prefers-reduced-motion:reduce){ .lb,#caption,#loader{transition:none} }
 </style>
@@ -263,6 +272,7 @@ body.editing #stage canvas{cursor:pointer}
 </aside>
 <aside id="cfgPanel" class="pnl" hidden aria-label="Aanpassen">
   <header><div><div class="eyebrow" id="cfgRoom"></div><h2 id="cfgTitle">Aanpassen</h2></div><button class="btn" id="cfgClose" aria-label="Aanpassen sluiten">✕</button></header>
+  <div class="cfg-tabs" role="group" aria-label="Onderdeel"><button class="btn" data-tab="aanpassen" aria-pressed="true">Aanpassen</button><button class="btn" data-tab="toevoegen" aria-pressed="false">+ Toevoegen</button><button class="btn" data-tab="overzicht" aria-pressed="false">Overzicht</button></div>
   <div class="cfg-tools"><label class="lbl" for="cfgPick">Element</label><select id="cfgPick"></select><button class="btn ghost" id="cfgView" hidden>Ga erheen</button></div>
   <div id="cfgBody"></div>
   <footer><span id="cfgSum"></span><button class="btn ghost" id="cfgReset" hidden>Terug naar tekening</button><span id="cfgSave" class="fb-status"></span></footer>
@@ -574,6 +584,8 @@ function buildMaterials() {
   defMat('carton', { color: 0xb7905e, roughness: 0.9 });
   defMat('crate', { color: 0x2f6a3a, roughness: 0.7 });
   defMat('leaf', { color: 0x4f7a3a, roughness: 0.8 });
+  TOMATO.forEach((V, i) => defMat('tom' + i, { color: V.c, roughness: 0.3 }, { cast: false }));
+  defMat('bigLeaf', { map: T.bigLeaf, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7 }, { cast: false });
   defMat('cropLeaf', { map: T.leafRow, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8 }, { cast: false });
   defMat('pot', { color: 0x2b2e2c, roughness: 0.6 });
   defMat('led', { color: 0xffffff, emissive: 0xfff6e8, emissiveIntensity: 2.2 }, { cast: false });
@@ -597,6 +609,7 @@ function buildMaterials() {
   defMat('pole', { color: 0x9aa0a4, roughness: 0.4, metalness: 0.7 }, { clip: false });
   defMat('streetlamp', { color: 0x222222, emissive: 0xffd9a0, emissiveIntensity: 0 }, { clip: false, cast: false });
 }
+const KEEP_UV = new Set(['bigLeaf']);
 let CAP = null; // als een element wordt opgebouwd, gaat alle geometrie naar dat element in plaats van naar de vaste batches
 function addGeo(key, g) { if (CAP) { (CAP.geos[key] ||= []).push(g); return; } batches.get(key).geos.push(g); }
 function capture(fn) { const prev = CAP; CAP = { geos: {}, cols: [], extra: [] }; try { fn(); } finally { const r = CAP; CAP = prev; capture.last = r; } return capture.last; }
@@ -604,7 +617,7 @@ function groupFromCapture(cap) {
   const grp = new THREE.Group();
   for (const [key, gs] of Object.entries(cap.geos)) {
     const b = batches.get(key); const list = gs.map(g => { let q = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(q.attributes)) if (!['position', 'normal', 'uv'].includes(k)) q.deleteAttribute(k); if (!q.attributes.normal) q.computeVertexNormals(); if (!q.attributes.uv) q.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(q.attributes.position.count * 2), 2)); return q; });
-    const merged = mergeGeometries(list, false); worldUV(merged);
+    const merged = mergeGeometries(list, false); if (!KEEP_UV.has(key)) worldUV(merged);
     const m = new THREE.Mesh(merged, b.mat); m.castShadow = b.cast; m.receiveShadow = b.receive; m.renderOrder = b.order; grp.add(m);
   }
   for (const e of cap.extra) grp.add(e);
@@ -724,7 +737,7 @@ function glassWall(x1, y1, x2, y2, z0, z1, ops = [], lvl = 0) {
     for (let k = 1; k <= nm; k++) { const m = a + (b - a) * k / (nm + 1); fp(m - 0.025, m + 0.025, z0, z1); }
   }
   for (const [a, b] of ops) fp(a, b, z1 - 0.05 > 2.6 ? 2.5 : z1 - 0.05, z1 - 0.05 > 2.6 ? 2.55 : z1);
-  planLines.push({ hor, A, B, c, ops: ops.map(o => [o[0], o[1], 0, 3, 'open']), lvl, glass: true });
+  if (!CAP) planLines.push({ hor, A, B, c, ops: ops.map(o => [o[0], o[1], 0, 3, 'open']), lvl, glass: true });
 }
 function rail(x1, y1, x2, y2, zb, h = 1.05, kind = 'glass') {
   const hor = Math.abs(y1 - y2) < 1e-6, A = hor ? Math.min(x1, x2) : Math.min(y1, y2), B = hor ? Math.max(x1, x2) : Math.max(y1, y2), c = hor ? y1 : x1;
@@ -906,6 +919,7 @@ const ROWS = [
   { y0: 8, y1: 16, x0: 0, x1: 25, e: EAVE, r: RIDGE },
   { y0: 16, y1: 24, x0: 0, x1: 40, e: EAVE, r: RIDGE }];
 
+const WALLS = [];
 function buildBuilding() {
   // --- vloeren
   for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) box('concrete', r[0], r[1], -0.25, r[2], r[3], 0.0);
@@ -956,7 +970,8 @@ function buildBuilding() {
   box('trim', 3.3, 21.3, CEIL - 0.02, 16, 21.4, FL1 + 0.04); box('trim', 15.9, 8, CEIL - 0.02, 16, 21.4, FL1 + 0.04); box('trim', 19.6, 15.95, CEIL - 0.02, 25, 16.05, FL1 + 0.04);
 
   // --- binnenwanden begane grond (h = 3000)
-  const P = (x1, y1, x2, y2, ops = [], z1 = CEIL) => wall('plaster', x1, y1, x2, y2, 0, z1, PT, ops);
+  // binnenwanden worden aanpasbare elementen (wandtype, deuren, ramen): zie defineWalls()
+  const P = (x1, y1, x2, y2, ops = [], z1 = CEIL) => WALLS.push({ x1, y1, x2, y2, z0: 0, z1, ops, lvl: 0 });
   const D = (a, b) => [a, b, 0, 2.3, 'door'];
   P(3.5, 16.05, 3.5, 21.4, [D(17.9, 18.8)]);                                 // teeltkantoor W
   P(3.5, 21.4, 16.0, 21.4, [[4.2, 8.0, 0.9, 2.6, 'win'], D(9.4, 10.3)]);       // noordwand cellen
@@ -965,7 +980,7 @@ function buildBuilding() {
   P(3.5, 8, 3.5, 16.05, [[12.0, 14.0, 0, 2.6, 'door']]);                       // techn. dienst
   P(10.2, 8, 10.2, 16.05);
   P(10.2, 13.3, 16, 13.3, [D(11.3, 12.2)]);                                   // kantine N
-  wall('plaster', 16, 8, 16, 13.3, 0, EAVE, PT);                               // kantine/entree
+  P(16, 8, 16, 13.3, [], EAVE);                                               // kantine/entree
   P(11.8, 14.8, 16, 14.8, [[12.0, 12.8, 0, 2.1, 'door'], [13.5, 14.3, 0, 2.1, 'door'], [14.9, 15.7, 0, 2.1, 'door']]);
   P(13.25, 14.8, 13.25, 16.1); P(14.7, 14.8, 14.7, 16.1); P(11.8, 16.1, 16, 16.1);
   P(11.8, 14.8, 11.8, 21.4, [D(16.8, 17.7), D(19.4, 20.3)]);                   // kleedruimtes W
@@ -990,8 +1005,8 @@ function buildBuilding() {
   planLines.push({ hor: false, A: ys, B: ye, c: 18.12, ops: [], lvl: 0, glass: true, rail: true });
 
   // --- verdieping: 1.01, Presentatieruimte 1.02, opslag 0.20
-  wall('plaster', 19.6, 16, 19.6, 24, FL1, EAVE, PT, [[22.2, 23.2, FL1, 5.5, 'door']], { lvl: 1 }); gableX('plaster', 19.6, 16, 24, EAVE, RIDGE - 0.15, PT);  // K
-  wall('plaster', 24.85, 16, 24.85, 24, FL1, EAVE, PT, [[22.1, 23.1, FL1, 5.5, 'door']], { lvl: 1 }); gableX('plaster', 24.85, 16, 24, EAVE, RIDGE - 0.15, PT); // I
+  WALLS.push({ x1: 19.6, y1: 16, x2: 19.6, y2: 24, z0: FL1, z1: EAVE, ops: [[22.2, 23.2, FL1, FL1 + 2.3, 'door']], lvl: 1, gable: true }); // K
+  WALLS.push({ x1: 24.85, y1: 16, x2: 24.85, y2: 24, z0: FL1, z1: EAVE, ops: [[22.1, 23.1, FL1, FL1 + 2.3, 'door']], lvl: 1, gable: true }); // I
   glassWall(19.6, 16, 24.85, 16, FL1, EAVE - 0.05, [], 1);                                            // L
   rail(18.0, 21.6, 18.0, 24, FL1);
   rail(3.3, 8.1, 3.3, 21.4, FL1, 1.1, 'mesh'); rail(3.3, 21.4, 10.0, 21.4, FL1, 1.1, 'mesh'); rail(11.5, 21.4, 16, 21.4, FL1, 1.1, 'mesh'); rail(16, 8.1, 16, 21.4, FL1, 1.1, 'mesh');
@@ -1645,7 +1660,8 @@ function drawPlans() {
     if (lvl === 1) { g.fillStyle = 'rgba(18,24,22,.55)'; for (const r of [[0, 0, 10.3, 8], [0, 8, 25, 16], [0, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } g.fillStyle = '#e9ece6'; for (const r of [[3.3, 8, 16, 21.4], [18, 21.6, 19.6, 24], [19.6, 16, 40, 24]]) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } }
     for (const R of ROOMS) if (R.l === lvl) { g.fillStyle = 'rgba(242,165,65,.06)'; for (const r of R.r) { const [a, b] = mpx(r[0], r[3]); g.fillRect(a, b, (r[2] - r[0]) * s, (r[3] - r[1]) * s); } }
     // wanden
-    for (const L of planLines) {
+    for (const L0 of planLines) {
+      const L = L0.el ? L0.el.plan() : L0; if (!L) continue;
       if (L.lvl !== lvl && !(lvl === 1 && L.ext)) continue;
       g.strokeStyle = L.gh ? 'rgba(170,210,150,.55)' : L.glass ? '#5f9fb5' : '#1b2320'; g.lineWidth = L.ext ? 3.2 : L.glass ? 1.6 : 2; g.lineCap = 'butt';
       let cur = L.A; const segs = []; for (const o of (L.ops || []).slice().sort((p, q) => p[0] - q[0])) { if (o[2] <= (lvl ? FL1 + 0.5 : 0.5)) { segs.push([cur, o[0]]); cur = o[1]; } } segs.push([cur, L.B]);
@@ -1707,7 +1723,7 @@ function floorPick(cx, cy) {
   const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 80;
   if (!pickSets.floor) pickSets.floor = [...buildingMeshes.filter(m => PICK_FLOOR.has(m.name)), SITE.ground].filter(Boolean);
   const objs = [...pickSets.floor, ...ELS.filter(e => e.group).map(e => e.group)];
-  const hit = floorRc.intersectObjects(objs, true).find(h => !(h.object.material && h.object.material.transparent)); if (!hit) return null;
+  const hit = floorRc.intersectObjects(objs, true).find(h => !(h.object.material && h.object.material.transparent) && h.point.y <= CLIP[0].constant + 0.01); if (!hit) return null;
   const n = hit.face ? hit.face.normal : null;
   if (n && n.y > 0.6) return { x: hit.point.x, y: -hit.point.z, h: hit.point.y };
   const back = hit.point.clone().addScaledVector(floorRc.ray.direction, -0.55); // muur aangeklikt: stop ervoor
@@ -2134,20 +2150,21 @@ $('#fbBtn').addEventListener('click', () => { if (CFG.on) setEdit(false); openPa
 $('#cfgBtn').addEventListener('click', () => setEdit(!CFG.on));
 $('#cfgClose').addEventListener('click', () => setEdit(false));
 $('#cfgPick').addEventListener('change', e => { const el = elById[e.target.value]; selectEl(el || null); });
-$('#cfgView').addEventListener('click', () => { const el = CFG.sel; if (!el || !el.view) return; setMode('walk'); $('#hint').hidden = true; teleport(el.view); selectEl(el); });
+document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$('#cfgView').addEventListener('click', () => { const el = CFG.sel; if (isItem(el)) { viewItem(el); return; } if (!el || !el.view) return; setMode('walk'); $('#hint').hidden = true; teleport(el.view); selectEl(el); });
 $('#cfgReset').addEventListener('click', () => { const el = CFG.sel; if (!el) return; for (const [k, p] of Object.entries(el.props)) el.values[k] = p.def; buildEl(el, true); renderCfg(); saveCfg(); });
 document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => setQuality(b.dataset.q)));
 // selecteren en hover in aanpasmodus
 let cfgHoverT = 0;
 cv.addEventListener('pointermove', e => {
-  if (!CFG.on || e.buttons) return; const now = performance.now(); if (now - cfgHoverT < 60) return; cfgHoverT = now;
+  if (!CFG.on || e.buttons || PLACE.it || DRAG.it) { hlHover.visible = false; return; } const now = performance.now(); if (now - cfgHoverT < 60) return; cfgHoverT = now;
   const el = pickEl(e.clientX, e.clientY); if (el && el !== CFG.sel) { hlHover.box.copy(elBounds(el)).expandByScalar(0.05); hlHover.visible = true; } else hlHover.visible = false;
 });
 cv.addEventListener('click', e => {
-  if (!CFG.on) return; if (downXY && Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return;
+  if (!CFG.on || PLACE.it || DRAG.eatClick) return; if (downXY && Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return;
   const el = pickEl(e.clientX, e.clientY); if (el) { selectEl(el); hlHover.visible = false; }
 }, true);
-addEventListener('keydown', e => { if (e.key === 'Escape' && CFG.on) { if (CFG.sel) selectEl(null); else setEdit(false); } });
+addEventListener('keydown', e => { if (e.key === 'Escape' && CFG.on && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) { if (CFG.sel) selectEl(null); else setEdit(false); } });
 $('#fbClose').addEventListener('click', () => openPanel(false));
 document.querySelectorAll('[data-ff]').forEach(b => b.addEventListener('click', () => { FB.filter = b.dataset.ff; document.querySelectorAll('[data-ff]').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList(); }));
 fbEls.form.addEventListener('submit', async e => {
@@ -2264,14 +2281,15 @@ function tableSet(x0, y0, x1, y1, z, h, top, leg, chairMat) {
 }
 const tableProps = (sizes, def) => ({
   blad: { label: 'Tafelblad', opts: TOPS, def: 'oak' },
-  maat: { label: 'Afmeting', opts: Object.entries(sizes).map(([k, v]) => [k, v[0].toLocaleString('nl-NL') + ' × ' + v[1].toLocaleString('nl-NL') + ' m']), def },
+  maat: { label: 'Afmeting', opts: [...Object.entries(sizes).map(([k, v]) => [k, v[0].toLocaleString('nl-NL') + ' × ' + v[1].toLocaleString('nl-NL') + ' m']), ['geen', 'Geen tafel']], def },
   poot: { label: 'Onderstel', opts: LEGS, def: 'black' },
   stoel: { label: 'Stoelen', opts: CHAIRS, def: 'fabric' } });
 function defTable(id, name, room, cx, cy, axis, sizes, def, view, stoel = 'fabric') {
-  const d = defineEl({ id, name, room, view, props: tableProps(sizes, def), build: v => { const [L, Wd] = sizes[v.maat]; const hx = axis === 'x' ? L / 2 : Wd / 2, hy = axis === 'x' ? Wd / 2 : L / 2; tableSet(cx - hx, cy - hy, cx + hx, cy + hy, 0, 0.75, v.blad, v.poot, v.stoel); } });
+  const d = defineEl({ id, name, room, view, props: tableProps(sizes, def), build: v => { if (v.maat === 'geen') return; const [L, Wd] = sizes[v.maat]; const hx = axis === 'x' ? L / 2 : Wd / 2, hy = axis === 'x' ? Wd / 2 : L / 2; tableSet(cx - hx, cy - hy, cx + hx, cy + hy, 0, 0.75, v.blad, v.poot, v.stoel); } });
   d.props.stoel.def = stoel; d.values.stoel = stoel;
 }
 function defineElements() {
+  defineWalls();
   defTable('tafel-ontvangst', 'Tafel ontvangstruimte', 'Ontvangstruimte 0.03', 22.6, 11.8, 'y', { s: [3.2, 0.9], m: [4.4, 1.0], l: [5.4, 1.1] }, 'm', ['', 21.2, 15.3, 0, 170]);
   defTable('tafel-spreek', 'Vergadertafel spreekkamer', 'Spreekkamer 0.11', 27.7, 21.3, 'y', { s: [2.0, 1.0], m: [2.6, 1.2], l: [3.4, 1.2] }, 'm', ['', 29.6, 18.8, 0, 320], 'fabric2');
   defTable('tafel-kantine', 'Lange tafel kantine', 'Kantine 0.05', 13.6, 12.0, 'x', { s: [3.0, 0.8], m: [4.0, 0.8], l: [4.8, 0.9] }, 'm', ['', 15.4, 9.0, 0, 320]);
@@ -2351,7 +2369,7 @@ function buildEl(el, flash) {
   if (el.group) { scene.remove(el.group); el.group.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const c of el.cols) { const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } }
   const cap = capture(() => el.build(el.values));
   el.group = groupFromCapture(cap); el.cols = cap.cols; el.group.userData.el = el; scene.add(el.group);
-  colGrid = null; shadowDirty = true;
+  colGrid = null; shadowDirty = true; if (el.plan && window.__ready) replan();
   if (flash) flashBox(el);
 }
 function elBounds(el) { if (el.global) return _bb.set(W(-0.3, 24.3, 0).setZ(-24.3), W(40.3, -0.3, 9).setZ(0.3)); return _bb.setFromObject(el.group); }
@@ -2363,11 +2381,11 @@ let flashT = 0;
 function flashBox(el) { hlSel.box.copy(elBounds(el)).expandByScalar(0.05); hlSel.visible = true; flashT = 1; }
 function pickEl(cx, cy) {
   const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 120;
-  const objs = ELS.filter(e => e.group).map(e => e.group); const facade = buildingMeshes.filter(m => m.name === 'panel' || m.name === 'roof');
+  const objs = [...ELS.filter(e => e.group).map(e => e.group), ...[...ITEMS.values()].filter(i => i.group && !i.placing).map(i => i.group)]; const facade = buildingMeshes.filter(m => m.name === 'panel' || m.name === 'roof');
   const occl = pickSets.occl || (pickSets.occl = buildingMeshes.filter(m => ['plaster', 'concrete', 'ceil', 'steel', 'trim', 'frame', 'oak', 'tile', 'wood', 'sect', 'inox', 'blue', 'stone'].includes(m.name)));
   const hit = floorRc.intersectObjects([...objs, ...facade, ...occl], true).find(h => h.point.y <= CLIP[0].constant + 0.01);
   if (!hit) return null;
-  let o = hit.object; while (o && !o.userData.el) o = o.parent; if (o) return o.userData.el;
+  let o = hit.object; while (o && !o.userData.el && !o.userData.item) o = o.parent; if (o) return o.userData.el || o.userData.item;
   if (hit.object.name === 'panel' || hit.object.name === 'roof') return elById.gevelkleur;
   return null;
 }
@@ -2375,36 +2393,108 @@ const CFG = { on: false, sel: null, db: null, local: false, timer: null, applyin
 function setEdit(on) {
   CFG.on = on; document.body.classList.toggle('editing', on); $('#cfgBtn').setAttribute('aria-pressed', on);
   $('#cfgPanel').hidden = !on; if (on) { if (!fbEls.panel.hidden) openPanel(false); if (mode === 'tour' || mode === 'none') setMode('orbit'); renderCfg(); }
-  else { CFG.sel = null; hlSel.visible = hlHover.visible = false; }
+  else { cancelPlace(); CFG.sel = null; hlSel.visible = hlHover.visible = false; }
   $('#mapwrap').classList.toggle('fbhide', on || !fbEls.panel.hidden);
 }
 function selectEl(el) { CFG.sel = el; if (el) { hlSel.box.copy(elBounds(el)).expandByScalar(0.05); hlSel.visible = true; } else hlSel.visible = false; renderCfg(); }
+function cfgMsg(t) { $('#cfgSave').textContent = t; }
+const isItem = x => !!x && ITEMS.get(x.id) === x;
+function setTab(t) { CFG.tab = t; if (t !== 'aanpassen' && PLACE.it) { /* blijft staan */ } renderCfg(); }
+function mkBtn(label, fn, cls = 'btn ghost') { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = label; b.addEventListener('click', fn); return b; }
 function renderCfg() {
+  const tab = CFG.tab || 'aanpassen';
+  document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
+  $('.cfg-tools').hidden = tab !== 'aanpassen';
   const box2 = $('#cfgBody'); box2.textContent = '';
-  const el = CFG.sel;
-  $('#cfgTitle').textContent = el ? el.name : 'Aanpassen'; $('#cfgRoom').textContent = el ? el.room : 'Klik in het model op een tafel, gevel, vloer, scherm of wand';
-  $('#cfgPick').value = el ? el.id : '';
-  if (!el) { const p = document.createElement('p'); p.className = 'cfg-empty'; p.textContent = 'Elementen die je kunt aanpassen lichten op als je eroverheen beweegt. Je kunt ook hierboven een element kiezen.'; box2.appendChild(p); }
-  else for (const [k, p] of Object.entries(el.props)) {
+  const nItems = [...ITEMS.values()].filter(i => !i.placing).length, changed = ELS.filter(e => Object.entries(e.props).some(([k, p]) => e.values[k] !== p.def));
+  $('#cfgSum').textContent = (changed.length ? changed.length + (changed.length === 1 ? ' element aangepast' : ' elementen aangepast') : 'Nog niets aangepast') + (nItems ? ' · ' + nItems + ' toegevoegd' : '');
+  $('#cfgReset').hidden = true; $('#cfgView').hidden = true;
+  if (tab === 'toevoegen') { $('#cfgTitle').textContent = 'Toevoegen'; $('#cfgRoom').textContent = 'Meubels, wanden en deuren'; renderCatalog(box2); return; }
+  if (tab === 'overzicht') { $('#cfgTitle').textContent = 'Overzicht'; $('#cfgRoom').textContent = 'Alle wijzigingen ten opzichte van de tekening'; renderOverview(); return; }
+  const el = CFG.sel, item = isItem(el);
+  const C = item ? catById[el.t] : null;
+  $('#cfgTitle').textContent = el ? (item ? C.name : el.name) : 'Aanpassen';
+  $('#cfgRoom').textContent = el ? (item ? (el.room || itemRoom(el)) + ' · toegevoegd' : el.room) : 'Klik in het model op een wand, deur, tafel, gevel of vloer';
+  $('#cfgPick').value = el && !item ? el.id : '';
+  if (!el) { const p = document.createElement('p'); p.className = 'cfg-empty'; p.textContent = 'Wat je kunt aanpassen licht op als je eroverheen beweegt: binnenwanden (dicht, glas of weg, met of zonder deur), gevels (raam of dicht), tafels, vloeren en meer. Wil je iets neerzetten? Kies "+ Toevoegen".'; box2.appendChild(p); return; }
+  if (item) {
+    const sec = document.createElement('section'); sec.className = 'cfg-act';
+    const hint = document.createElement('p'); hint.className = 'cfg-hint';
+    const row = document.createElement('div'); row.className = 'fb-row';
+    if (el.placing) { hint.textContent = 'Beweeg de muis en klik op de vloer om het neer te zetten. R draait 90°, Shift+R 15°, Esc annuleert.'; row.append(mkBtn('Hier neerzetten', commitPlace, 'btn primary'), mkBtn('Draai 90°', () => rotateItem(el, 90)), mkBtn('Annuleren', () => { cancelPlace(); renderCfg(); })); }
+    else { hint.textContent = FB.canWrite ? 'Sleep het in het model om te verplaatsen (Alt = zonder rasters). R draait, Delete verwijdert.' : 'Je kunt dit bekijken; aanpassen kan met bewerkrechten.';
+      if (FB.canWrite) row.append(mkBtn('Draai 90°', () => rotateItem(el, 90)), mkBtn('Draai 15°', () => rotateItem(el, 15)), mkBtn('Verplaats', () => startMove(el)), mkBtn('Dupliceer', () => startPlace(el.t, el.v, el)));
+      if (FB.canWrite) { const del = mkBtn('Verwijder', () => { if (del.dataset.sure) deleteItem(el); else { del.dataset.sure = '1'; del.textContent = 'Zeker weten?'; setTimeout(() => { delete del.dataset.sure; del.textContent = 'Verwijder'; }, 3000); } }); row.append(del); } }
+    sec.append(hint, row); box2.appendChild(sec);
+    if (!el.placing && el.at) { const m = document.createElement('p'); m.className = 'fb-meta'; m.dataset.by = el.by || ''; let when = ''; try { when = new Date(el.at).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { } m.textContent = 'Geplaatst · ' + when; box2.appendChild(m); whoInto(m, el.by, 'Geplaatst door ', ' · ' + when); }
+  }
+  const props = item ? C.props : el.props, vals = item ? el.v : el.values;
+  for (const [k, p] of Object.entries(props)) {
     const sec = document.createElement('section'); sec.className = 'cfg-prop';
     const h = document.createElement('h3'); h.textContent = p.label; sec.appendChild(h);
     const grid = document.createElement('div'); grid.className = 'cfg-opts';
     for (const [val, label] of p.opts) {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'cfg-opt'; b.setAttribute('aria-pressed', el.values[k] === val);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cfg-opt'; b.setAttribute('aria-pressed', vals[k] === val);
       const col = (p.sw && p.sw[val]) || SW[val];
       if (col) { const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = col; b.appendChild(sw); }
       const t = document.createElement('span'); t.textContent = label; b.appendChild(t);
-      if (val === p.def) { const d = document.createElement('i'); d.textContent = 'tekening'; b.appendChild(d); }
-      b.addEventListener('click', () => { el.values[k] = val; buildEl(el, true); renderCfg(); saveCfg(); });
+      if (!item && val === p.def) { const d = document.createElement('i'); d.textContent = 'tekening'; b.appendChild(d); }
+      b.addEventListener('click', () => {
+        if (item) { el.v = { ...el.v, [k]: val }; buildItem(el); hlSel.box.setFromObject(el.group).expandByScalar(0.04); if (!el.placing) saveItem(el); renderCfg(); }
+        else { el.values[k] = val; buildEl(el, true); renderCfg(); saveCfg(); } });
       grid.appendChild(b);
     }
     sec.appendChild(grid); box2.appendChild(sec);
   }
-  const changed = ELS.filter(e => Object.entries(e.props).some(([k, p]) => e.values[k] !== p.def));
-  $('#cfgSum').textContent = changed.length ? changed.length + (changed.length === 1 ? ' element aangepast' : ' elementen aangepast') : 'Nog niets aangepast';
-  $('#cfgReset').hidden = !el || !Object.entries(el.props).some(([k, p]) => el.values[k] !== p.def);
-  $('#cfgView').hidden = !el || !el.view;
+  if (!item) { $('#cfgReset').hidden = !Object.entries(el.props).some(([k, p]) => el.values[k] !== p.def); $('#cfgView').hidden = !el.view; }
+  else $('#cfgView').hidden = !!el.placing;
 }
+async function whoInto(node, by, pre, post) {
+  if (!by) return; let name = by === FB.me ? 'jou' : 'iemand';
+  try { if (FB.user) { const ps = await FB.user.profiles([by]); if (ps[by] && ps[by].name) name = by === FB.me ? 'jou' : ps[by].name; } } catch (e) { }
+  if (node.isConnected) node.textContent = pre + name + post;
+}
+function renderCatalog(box2) {
+  const p = document.createElement('p'); p.className = 'cfg-empty';
+  p.textContent = FB.canWrite ? 'Kies wat je wilt neerzetten. Het verschijnt in beeld en volgt je muis; klik op de vloer om het te plaatsen. Daarna kun je het verslepen, draaien en aanpassen. Iedereen in het project ziet het meteen.' : 'Je hebt leesrechten: je ziet wat anderen hebben neergezet, maar kunt zelf niets toevoegen.';
+  box2.appendChild(p); if (!FB.canWrite) return;
+  const cats = [...new Set(CATALOG.map(c => c.cat))];
+  for (const cat of cats) {
+    const sec = document.createElement('section'); sec.className = 'cfg-prop'; const h = document.createElement('h3'); h.textContent = cat; sec.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'cfg-opts';
+    for (const c of CATALOG.filter(x => x.cat === cat)) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cfg-opt cat-opt';
+      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${c.icon}"/></svg>`;
+      const t = document.createElement('span'); t.textContent = c.name; b.appendChild(t);
+      b.addEventListener('click', () => { CFG.tab = 'aanpassen'; startPlace(c.id); });
+      grid.appendChild(b);
+    }
+    sec.appendChild(grid); box2.appendChild(sec);
+  }
+}
+function viewItem(it) { setMode('orbit'); setCut(it.z > 2 ? 'vd' : 'bg', false); orbit.target.set(it.x, it.z + 0.6, -it.y); camera.position.set(it.x + 5.5, it.z + 7, -it.y + 6.5); orbit.update(); selectEl(it); }
+function renderOverview() {
+  if (!CFG.on) return; if ((CFG.tab || 'aanpassen') !== 'overzicht') { const n = [...ITEMS.values()].filter(i => !i.placing).length, t = $('#cfgSum').textContent.replace(/ · \d+ toegevoegd$/, ''); $('#cfgSum').textContent = t + (n ? ' · ' + n + ' toegevoegd' : ''); return; }
+  const box2 = $('#cfgBody'); box2.textContent = '';
+  const items = [...ITEMS.values()].filter(i => !i.placing).sort((a, b) => String(a.room).localeCompare(String(b.room)) || String(a.at).localeCompare(String(b.at)));
+  const changed = ELS.filter(e => Object.entries(e.props).some(([k, p]) => e.values[k] !== p.def));
+  if (!items.length && !changed.length) { const p = document.createElement('p'); p.className = 'cfg-empty'; p.textContent = 'Nog niets gewijzigd. Alles staat zoals op de tekening.'; box2.appendChild(p); return; }
+  const list = (title, rows) => { if (!rows.length) return; const sec = document.createElement('section'); sec.className = 'cfg-prop'; const h = document.createElement('h3'); h.textContent = title; sec.appendChild(h); const ol = document.createElement('ol'); ol.className = 'ov-list'; rows.forEach(r => ol.appendChild(r)); sec.appendChild(ol); box2.appendChild(sec); };
+  list('Toegevoegd (' + items.length + ')', items.map(it => { const li = document.createElement('li'); const top = document.createElement('div'); top.className = 'fb-top';
+    const n = document.createElement('span'); n.className = 'fb-room'; n.textContent = catById[it.t].name; const c = document.createElement('span'); c.className = 'fb-cat'; c.textContent = it.room || ''; top.append(n, c);
+    const m = document.createElement('div'); m.className = 'fb-meta'; m.textContent = Object.entries(catById[it.t].props).map(([k, p]) => (p.opts.find(o => o[0] === it.v[k]) || [, ''])[1]).join(' · '); 
+    const row = document.createElement('div'); row.className = 'fb-row'; row.append(mkBtn('Bekijk', () => { CFG.tab = 'aanpassen'; viewItem(it); }, 'btn'));
+    if (FB.canWrite) row.append(mkBtn('Verwijder', () => deleteItem(it), 'btn'));
+    li.append(top, m, row); return li; }));
+  list('Aangepast t.o.v. tekening (' + changed.length + ')', changed.map(el => { const li = document.createElement('li'); const top = document.createElement('div'); top.className = 'fb-top';
+    const n = document.createElement('span'); n.className = 'fb-room'; n.textContent = el.name; const c = document.createElement('span'); c.className = 'fb-cat'; c.textContent = el.room || ''; top.append(n, c);
+    const m = document.createElement('div'); m.className = 'fb-meta'; m.textContent = Object.entries(el.props).filter(([k, p]) => el.values[k] !== p.def).map(([k, p]) => p.label + ': ' + (p.opts.find(o => o[0] === el.values[k]) || [, el.values[k]])[1]).join(' · ');
+    const row = document.createElement('div'); row.className = 'fb-row';
+    row.append(mkBtn('Bekijk', () => { CFG.tab = 'aanpassen'; if (el.view) { setMode('walk'); $('#hint').hidden = true; teleport(el.view); } selectEl(el); }, 'btn'));
+    if (FB.canWrite) row.append(mkBtn('Terug naar tekening', () => { for (const [k, p] of Object.entries(el.props)) el.values[k] = p.def; buildEl(el, false); saveCfg(); renderCfg(); }, 'btn'));
+    li.append(top, m, row); return li; }));
+}
+function startMove(it) { cancelPlace(); PLACE.it = it; PLACE.restore = { x: it.x, y: it.y, z: it.z, r: it.r }; it.placing = true; document.body.classList.add('placing'); renderCfg(); }
 // keuzes bewaren: gedeeld (db) of in deze browser
 const CKEY = 'axia-nieuwbouw-keuzes';
 function cfgState() { const o = {}; for (const e of ELS) { const d = {}; for (const [k, p] of Object.entries(e.props)) if (e.values[k] !== p.def) d[k] = e.values[k]; if (Object.keys(d).length) o[e.id] = d; } return o; }
@@ -2422,9 +2512,333 @@ function saveCfg() {
   }, 500);
 }
 async function initCfg() {
+  setTimeout(() => initItems(), 0);
   if (FB.db) { CFG.db = FB.db; FB.db.doc('config/current').onSnapshot(snap => { if (snap.exists) applyCfg(snap.data().values || {}); }, () => { }); }
   else { try { applyCfg(JSON.parse(localStorage.getItem(CKEY) || '{}')); } catch (e) { } }
 }
+
+
+/* ==========================================================================
+   INDELING — binnenwanden, deuren en ramen als aanpasbare elementen
+   ========================================================================== */
+// deurblad: draaideur staat op een kier (75°) zodat je erdoor kunt lopen, schuifdeur ligt naast de opening
+function doorLeaf(hor, c, a, b, z0, z1, type, t = PT) {
+  const w = b - a - 0.02, h = z1 - z0 - 0.02, k = type === 'eiken' ? 'oak' : type === 'glas' ? 'glass' : 'white';
+  const parts = [[k, 0, 0, -0.02, w, h, 0.02]];
+  if (type === 'glas') parts.push(['frame', 0, 0, -0.025, w, 0.1, 0.025], ['frame', 0, h - 0.06, -0.025, w, h, 0.025], ['frame', 0, 0, -0.025, 0.05, h, 0.025], ['frame', w - 0.05, 0, -0.025, w, h, 0.025]);
+  parts.push(['chrome', w - 0.12, 1.02, -0.06, w - 0.08, 1.06, 0.06], ['chrome', w - 0.3, 1.02, 0.05, w - 0.08, 1.05, 0.07], ['chrome', w - 0.3, 1.02, -0.07, w - 0.08, 1.05, -0.05]);
+  if (type === 'schuif') {
+    const off = t / 2 + 0.05;
+    for (const [key, x0, y0, z0l, x1, y1, z1l] of parts) { if (hor) box(key, b - 0.06 + x0, c + off + z0l, z0 + y0, b - 0.06 + x1, c + off + z1l, z0 + y1); else box(key, c + off + z0l, b - 0.06 + x0, z0 + y0, c + off + z1l, b - 0.06 + x1, z0 + y1); }
+    if (hor) box('steel', a - 0.05, c + off - 0.035, z0 + h, b + w, c + off + 0.035, z0 + h + 0.07); else box('steel', c + off - 0.035, a - 0.05, z0 + h, c + off + 0.035, b + w, z0 + h + 0.07);
+    return;
+  }
+  const th = 1.3, rot = hor ? th : Math.PI / 2 - th;
+  for (const [key, x0, y0, z0l, x1, y1, z1l] of parts) {
+    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1l - z0l); g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0l + z1l) / 2); g.rotateY(rot);
+    if (hor) g.translate(a + 0.01, z0, -c); else g.translate(c, z0, -(a + 0.01)); addGeo(key, g);
+  }
+}
+// strook met glas boven een borstwering, onderbroken door deuren
+function bandOps(A, B, doors, z0, z1) {
+  const out = []; let cur = A + 0.1;
+  for (const d of doors.slice().sort((p, q) => p[0] - q[0])) { if (d[0] - 0.1 - cur > 0.3) out.push([cur, d[0] - 0.1, z0, z1, 'win']); cur = d[1] + 0.1; }
+  if (B - 0.1 - cur > 0.3) out.push([cur, B - 0.1, z0, z1, 'win']);
+  return out;
+}
+const WALL_TYPES = [['stuc', 'Dichte wand'], ['glas', 'Glazen wand'], ['half', 'Borstwering + glas'], ['akoestisch', 'Akoestische wand (vilt)'], ['weg', 'Geen wand (open)']];
+const DOOR_TYPES = [['opening', 'Kozijn, geen blad'], ['draai', 'Draaideur wit'], ['eiken', 'Draaideur eiken'], ['glas', 'Glazen deur'], ['schuif', 'Schuifdeur'], ['dicht', 'Geen deur (dicht)']];
+const ADD_DOOR = [['geen', 'Geen deur'], ['draai', 'Draaideur in het midden'], ['glas', 'Glazen deur in het midden'], ['schuif', 'Schuifdeur in het midden']];
+SW.stuc = '#f6f6f4'; SW.glas = 'linear-gradient(135deg,#cfe3ea,#7d98a3)'; SW.half = 'linear-gradient(180deg,#cfe3ea 55%,#f6f6f4 55%)'; SW.akoestisch = '#3f5a48'; SW.weg = 'repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.25) 6px 8px)';
+function defineWalls() {
+  const used = {};
+  WALLS.forEach((w, i) => {
+    const hor = Math.abs(w.y1 - w.y2) < 1e-6, A = hor ? Math.min(w.x1, w.x2) : Math.min(w.y1, w.y2), B = hor ? Math.max(w.x1, w.x2) : Math.max(w.y1, w.y2), c = hor ? w.y1 : w.x1;
+    const doors = w.ops.filter(o => (o[4] || 'door') === 'door'), wins = w.ops.filter(o => o[4] === 'win');
+    const mx = (w.x1 + w.x2) / 2, my = (w.y1 + w.y2) / 2, side = s => roomAt(hor ? mx : mx + s, hor ? my + s : my, w.lvl);
+    const r1 = side(-0.35), r2 = side(0.35), names = [...new Set([r1, r2].filter(r => ROOMS.includes(r)).map(r => r.n))];
+    let name = 'Wand ' + (names.length ? names.join(' / ') : 'binnen'); used[name] = (used[name] || 0) + 1; if (used[name] > 1) name += ' (' + used[name] + ')';
+    const inR = ROOMS.includes(r1) ? -1 : 1, dist = Math.min(2.2, ((ROOMS.includes(r1) ? r1 : r2).r[0][hor ? 3 : 2] - (ROOMS.includes(r1) ? r1 : r2).r[0][hor ? 1 : 0]) * 0.75);
+    const view = ['', hor ? mx : mx + inR * dist, hor ? my + inR * dist : my, w.lvl ? FL1 : 0, hor ? (inR < 0 ? 0 : 180) : (inR < 0 ? 90 : 270)];
+    const props = { wand: { label: 'Wand', opts: WALL_TYPES, def: 'stuc' } };
+    props.deur = doors.length ? { label: doors.length > 1 ? 'Deuren (' + doors.length + ')' : 'Deur', opts: DOOR_TYPES, def: 'opening' } : { label: 'Deur', opts: ADD_DOOR, def: 'geen' };
+    if (wins.length) props.raam = { label: 'Binnenraam', opts: [['raam', 'Raam'], ['dicht', 'Geen raam']], def: 'raam' };
+    const room = (names[0] || 'Binnenwand') + (w.lvl ? ' (verdieping)' : '');
+    const el = defineEl({ id: 'wand-' + i, name, room, view, props, wallSpec: w,
+      build: v => {
+        if (v.wand === 'weg') return;
+        let ds = doors.map(d => [d[0], d[1], d[2], d[3]]), leaf = v.deur;
+        if (!doors.length) { if (v.deur === 'geen') ds = []; else { const m = (A + B) / 2; ds = [[m - 0.45, m + 0.45, w.z0, w.z0 + 2.3]]; } }
+        if (leaf === 'dicht') ds = [];
+        const dOps = ds.map(d => [...d, 'door']), wOps = v.raam === 'dicht' ? [] : wins;
+        const x1 = w.x1, y1 = w.y1, x2 = w.x2, y2 = w.y2;
+        if (v.wand === 'glas') { glassWall(x1, y1, x2, y2, w.z0, Math.min(w.z1, w.z0 + 3.0), ds.map(d => [d[0], d[1]]), w.lvl); if (w.z1 > w.z0 + 3.0) wall('plaster', x1, y1, x2, y2, w.z0 + 3.0, w.z1, PT, [], { plan: false }); }
+        else if (v.wand === 'half') wall('plaster', x1, y1, x2, y2, w.z0, w.z1, PT, [...dOps, ...bandOps(A, B, ds, w.z0 + 1.0, w.z0 + Math.min(2.9, w.z1 - w.z0 - 0.1))], { plan: false });
+        else { wall('plaster', x1, y1, x2, y2, w.z0, w.z1, PT, [...dOps, ...wOps], { plan: false });
+          if (v.wand === 'akoestisch') for (const s of [-1, 1]) { let cur = A; for (const d of [...ds].sort((p, q) => p[0] - q[0]).concat([[B, B]])) { if (d[0] - cur > 0.05) { if (hor) box('feltGreen', cur, c + s * PT / 2, w.z0, d[0], c + s * (PT / 2 + 0.03), Math.min(w.z1, w.z0 + 2.9)); else box('feltGreen', c + s * PT / 2, cur, w.z0, c + s * (PT / 2 + 0.03), d[0], Math.min(w.z1, w.z0 + 2.9)); } cur = d[1]; } } }
+        if (w.gable && v.wand !== 'glas') gableX('plaster', c, A, B, EAVE, RIDGE - 0.15, PT);
+        if (w.gable && v.wand === 'glas') gableX('plaster', c, A, B, EAVE, RIDGE - 0.15, PT);
+        const lt = doors.length ? leaf : v.deur;
+        if (['draai', 'eiken', 'glas', 'schuif'].includes(lt)) for (const d of ds) doorLeaf(hor, c, d[0], d[1], d[2], d[3], lt);
+      },
+      plan() { const v = this.values; if (v.wand === 'weg') return null;
+        let ds = doors.map(d => [d[0], d[1], d[2], d[3], 'door']); if (!doors.length && v.deur !== 'geen') { const m = (A + B) / 2; ds = [[m - 0.45, m + 0.45, w.z0, w.z0 + 2.3, 'door']]; } if (v.deur === 'dicht') ds = [];
+        return { hor, A, B, c, ops: ds.map(d => [d[0], d[1], d[2] - (w.lvl ? FL1 : 0), d[3], 'door']), lvl: w.lvl, glass: v.wand === 'glas' || v.wand === 'half' }; } });
+    planLines.push({ el });
+  });
+}
+let planTimer = null;
+function replan() { clearTimeout(planTimer); planTimer = setTimeout(() => drawPlans(), 250); }
+
+/* ==========================================================================
+   INRICHTEN — meubels en losse wanden toevoegen, verslepen, draaien, opslaan
+   ========================================================================== */
+const CABS = [['white', 'Wit'], ['oak', 'Eiken'], ['anthracite', 'Antraciet'], ['walnut', 'Noten']];
+const yesno = (a, b) => [['ja', a], ['nee', b]];
+function cyl(key, r, h, x, y, z, seg = 28, r2 = r) { const g = new THREE.CylinderGeometry(r, r2, h, seg); g.translate(x, z + h / 2, -y); addGeo(key, g); }
+function fruit(i, x, y, z, rad) { const g = new THREE.SphereGeometry(rad, 12, 8); g.scale(1, 0.86, 1); g.translate(x, z + rad * 0.86, -y); addGeo('tom' + i, g); }
+function itemCrate(x0, y0, z, ti, w = 0.4, d = 0.3) {
+  box('oak', x0, y0, z, x0 + w, y0 + d, z + 0.02); box('oak', x0, y0, z, x0 + w, y0 + 0.012, z + 0.09); box('oak', x0, y0 + d - 0.012, z, x0 + w, y0 + d, z + 0.09);
+  box('oak', x0, y0, z, x0 + 0.012, y0 + d, z + 0.09); box('oak', x0 + w - 0.012, y0, z, x0 + w, y0 + d, z + 0.09);
+  const V = TOMATO[ti], r = V.r, st = r * 2.05;
+  for (let x = x0 + 0.02 + r; x < x0 + w - 0.015 - r * 0.6; x += st) for (let y = y0 + 0.02 + r; y < y0 + d - 0.015 - r * 0.6; y += st) fruit(ti, x, y, z + 0.02, r);
+}
+function chairRot(x, y, ang, mat, z = 0) { // stoel in willekeurige richting (ang = richting waarin je kijkt)
+  const parts = [[mat, -0.23, -0.23, 0.43, 0.23, 0.23, 0.49], [mat, -0.23, -0.26, 0.49, 0.23, -0.2, 0.92]];
+  for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(['black', ox * 0.2 - 0.015, oy * 0.2 - 0.015, 0, ox * 0.2 + 0.015, oy * 0.2 + 0.015, 0.43]);
+  for (const [k, a0, b0, c0, a1, b1, c1] of parts) { const g = new THREE.BoxGeometry(a1 - a0, c1 - c0, b1 - b0); g.translate((a0 + a1) / 2, (c0 + c1) / 2, -(b0 + b1) / 2); g.rotateY(ang - Math.PI / 2); g.translate(x, z, -y); addGeo(k, g); }
+}
+function cabinet(L, D, H, k, fronts = true) {
+  box(k, -L / 2, -D / 2, 0.06, L / 2, D / 2, H, { col: true }); box('black', -L / 2 + 0.03, -D / 2 + 0.04, 0, L / 2 - 0.03, D / 2, 0.06);
+  if (!fronts) return; const n = Math.max(1, Math.round(L / 0.5));
+  for (let i = 1; i < n; i++) { const x = -L / 2 + L * i / n; box('black', x - 0.003, -D / 2 - 0.002, 0.08, x + 0.003, -D / 2, H - 0.02); }
+  for (let i = 0; i < n; i++) { const x = -L / 2 + L * (i + 0.5) / n + (i % 2 ? -1 : 1) * (L / n / 2 - 0.06); box('chrome', x - 0.008, -D / 2 - 0.025, H / 2 - 0.15, x + 0.008, -D / 2, H / 2 + 0.15); }
+}
+function screenTV(inch, wallMount) {
+  const [w, h] = { 55: [1.22, 0.69], 65: [1.44, 0.81], 75: [1.66, 0.94], 86: [1.9, 1.07], 98: [2.17, 1.22] }[inch], zc = wallMount ? 1.55 : 1.35;
+  box('black', -w / 2 - 0.02, -0.03, zc - h / 2 - 0.02, w / 2 + 0.02, 0.03, zc + h / 2 + 0.02);
+  canvasPlane(w, h, drawScreen('Tomatenrassen', 'AXIA · RASSENPRESENTATIE'), new THREE.Vector3(0, zc, 0.032), 0, { emissive: 0.9 });
+  if (wallMount) return;
+  for (const x of [-0.3, 0.3]) box('black', x - 0.03, 0.03, 0.12, x + 0.03, 0.09, zc - 0.2);
+  box('black', -0.45, -0.3, 0.06, 0.45, 0.35, 0.12, { col: true }); for (const [x, y] of [[-0.4, -0.25], [0.4, -0.25], [-0.4, 0.3], [0.4, 0.3]]) cyl('black', 0.04, 0.06, x, y, 0, 12);
+}
+function bigPlant(s, potKey) {
+  cyl(potKey, 0.24 * s, 0.5 * s, 0, 0, 0, 24, 0.19 * s); colliderLocal(-0.25 * s, -0.25 * s, 0.25 * s, 0.25 * s, 0, 0.5 * s);
+  for (let k = 0; k < 14; k++) { const yaw = k * 2.399, up = 0.5 * s + (0.3 + (k / 14) * 0.9) * s, l = (0.5 - k * 0.012) * s;
+    const st = new THREE.CylinderGeometry(0.01, 0.012, up - 0.45 * s, 5); st.translate(Math.cos(yaw) * 0.03, 0.45 * s + (up - 0.45 * s) / 2, -Math.sin(yaw) * 0.03); addGeo('trunk', st);
+    const pl = new THREE.PlaneGeometry(0.24 * s, l); pl.translate(0, l / 2, 0); pl.rotateX(-Math.PI / 2 + 0.55 + (k / 14) * 0.5); pl.rotateY(yaw - Math.PI / 2); pl.translate(Math.cos(yaw) * 0.04, up, -Math.sin(yaw) * 0.04); addGeo('bigLeaf', pl); }
+}
+function colliderLocal(x0, y0, x1, y1, z0, z1) { if (CAP) CAP.cols.push({ x0, y0, x1, y1, z0, z1, active: true }); }
+const SIZES = { 120: [1.2, 0.8], 160: [1.6, 0.9], 200: [2.0, 1.0], 240: [2.4, 1.1], 300: [3.0, 1.2], 400: [4.0, 1.2] };
+const CATALOG = [
+  { id: 'tafel', cat: 'Tafels', name: 'Vergadertafel', icon: 'M3 9h18v2H3zM5 11v8M19 11v8',
+    props: { maat: { label: 'Afmeting', opts: Object.keys(SIZES).map(k => [k, SIZES[k][0].toLocaleString('nl-NL') + ' × ' + SIZES[k][1].toLocaleString('nl-NL') + ' m']), def: '200' }, blad: { label: 'Tafelblad', opts: TOPS, def: 'oak' }, poot: { label: 'Onderstel', opts: LEGS, def: 'black' }, stoelen: { label: 'Stoelen', opts: yesno('Met stoelen', 'Zonder stoelen'), def: 'ja' }, stoel: { label: 'Kleur stoelen', opts: CHAIRS, def: 'fabric' } },
+    build: v => { const [L, D] = SIZES[v.maat]; tableSet(-L / 2, -D / 2, L / 2, D / 2, 0, 0.75, v.blad, v.poot, v.stoelen === 'ja' ? v.stoel : null); } },
+  { id: 'rond', cat: 'Tafels', name: 'Ronde tafel', icon: 'M4 9a8 3 0 1 0 16 0a8 3 0 1 0-16 0M12 12v8M8 20h8',
+    props: { maat: { label: 'Diameter', opts: [['90', 'Ø 0,9 m'], ['120', 'Ø 1,2 m'], ['150', 'Ø 1,5 m']], def: '120' }, blad: { label: 'Tafelblad', opts: TOPS, def: 'tableWhite' }, stoelen: { label: 'Stoelen', opts: yesno('Met stoelen', 'Zonder stoelen'), def: 'ja' }, stoel: { label: 'Kleur stoelen', opts: CHAIRS, def: 'fabric' } },
+    build: v => { const r = +v.maat / 200; cyl(v.blad === 'glass' ? 'glass' : v.blad, r, 0.04, 0, 0, 0.71, 48); cyl('black', 0.04, 0.68, 0, 0, 0.03, 12); cyl('black', 0.3, 0.03, 0, 0, 0, 32); colliderLocal(-r, -r, r, r, 0, 0.75);
+      if (v.stoelen === 'ja') { const n = r < 0.5 ? 3 : r < 0.7 ? 4 : 6; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + 0.3; chairRot(Math.cos(a) * (r + 0.32), Math.sin(a) * (r + 0.32), a + Math.PI, v.stoel); } } } },
+  { id: 'sta', cat: 'Tafels', name: 'Statafel', icon: 'M7 6h10M12 6v13M8 19h8',
+    props: { blad: { label: 'Tafelblad', opts: TOPS, def: 'oak' } },
+    build: v => { cyl(v.blad === 'glass' ? 'glass' : v.blad, 0.36, 0.035, 0, 0, 1.07, 40); cyl('black', 0.03, 1.05, 0, 0, 0.02, 10); cyl('black', 0.26, 0.025, 0, 0, 0, 30); colliderLocal(-0.36, -0.36, 0.36, 0.36, 0, 1.1); } },
+  { id: 'bureau', cat: 'Tafels', name: 'Bureau met werkplek', icon: 'M3 12h18M5 12v7M19 12v7M9 5h6v5H9z',
+    props: { maat: { label: 'Breedte', opts: [['140', '1,4 m'], ['160', '1,6 m'], ['180', '1,8 m']], def: '160' }, blad: { label: 'Blad', opts: TOPS.filter(t => t[0] !== 'glass'), def: 'tableWhite' }, scherm: { label: 'Beeldschermen', opts: [['1', 'Eén scherm'], ['2', 'Twee schermen'], ['0', 'Geen']], def: '2' }, stoel: { label: 'Bureaustoel', opts: CHAIRS, def: 'fabricBlack' } },
+    build: v => { const L = +v.maat / 100, D = 0.8; box(v.blad, -L / 2, -D / 2, 0.72, L / 2, D / 2, 0.75, { col: true });
+      for (const x of [-L / 2 + 0.05, L / 2 - 0.08]) box('black', x, -D / 2 + 0.05, 0, x + 0.03, D / 2 - 0.05, 0.72);
+      box('black', -L / 2 + 0.08, -D / 2 + 0.1, 0.5, L / 2 - 0.08, -D / 2 + 0.12, 0.7);
+      const n = +v.scherm; for (let i = 0; i < n; i++) { const x = n === 1 ? 0 : (i ? 0.32 : -0.32); box('black', x - 0.3, -0.28, 0.95, x + 0.3, -0.25, 1.3); box('led', x - 0.28, -0.251, 0.97, x + 0.28, -0.249, 1.28); box('black', x - 0.03, -0.3, 0.75, x + 0.03, -0.27, 0.97); box('black', x - 0.12, -0.36, 0.75, x + 0.12, -0.22, 0.76); }
+      box('black', -0.22, 0.05, 0.75, 0.22, 0.2, 0.77); chairRot(0, D / 2 + 0.25, -Math.PI / 2, v.stoel); } },
+  { id: 'stoel', cat: 'Zitten', name: 'Losse stoel', icon: 'M8 4v9h8M8 13v7M16 13v7',
+    props: { stoel: { label: 'Kleur', opts: CHAIRS, def: 'fabric' } }, build: v => { chairRot(0, 0, Math.PI / 2, v.stoel); colliderLocal(-0.24, -0.24, 0.24, 0.24, 0, 0.9); } },
+  { id: 'bank', cat: 'Zitten', name: 'Loungebank', icon: 'M3 11h18v6H3zM5 11V8h14v3M5 17v2M19 17v2',
+    props: { maat: { label: 'Formaat', opts: [['2', '2-zits'], ['3', '3-zits'], ['4', '4-zits']], def: '3' }, stof: { label: 'Stof', opts: CHAIRS, def: 'fabric2' } },
+    build: v => { const L = { 2: 1.6, 3: 2.2, 4: 2.8 }[v.maat]; sofa(-L / 2, -0.45, L / 2, 0.45, 's', v.stof); box(v.stof, -L / 2, -0.45, 0.45, -L / 2 + 0.18, 0.45, 0.68); box(v.stof, L / 2 - 0.18, -0.45, 0.45, L / 2, 0.45, 0.68); } },
+  { id: 'fauteuil', cat: 'Zitten', name: 'Fauteuil', icon: 'M6 10h12v7H6zM6 10V7h12v3',
+    props: { stof: { label: 'Stof', opts: CHAIRS, def: 'fabricOker' } },
+    build: v => { sofa(-0.42, -0.42, 0.42, 0.42, 's', v.stof); box(v.stof, -0.42, -0.42, 0.45, -0.3, 0.42, 0.66); box(v.stof, 0.3, -0.42, 0.45, 0.42, 0.42, 0.66); } },
+  { id: 'kast', cat: 'Opbergen', name: 'Kast', icon: 'M5 3h14v18H5zM12 3v18',
+    props: { breed: { label: 'Breedte', opts: [['80', '0,8 m'], ['120', '1,2 m'], ['160', '1,6 m'], ['200', '2,0 m'], ['300', '3,0 m']], def: '120' }, hoog: { label: 'Hoogte', opts: [['75', 'Dressoir 0,75 m'], ['120', 'Halfhoog 1,2 m'], ['200', 'Hoog 2,0 m']], def: '200' }, kleur: { label: 'Kleur', opts: CABS, def: 'white' } },
+    build: v => cabinet(+v.breed / 100, 0.45, +v.hoog / 100, v.kleur) },
+  { id: 'vakkenkast', cat: 'Opbergen', name: 'Open vakkenkast', icon: 'M5 3h14v18H5zM5 9h14M5 15h14',
+    props: { breed: { label: 'Breedte', opts: [['80', '0,8 m'], ['120', '1,2 m'], ['200', '2,0 m']], def: '120' }, kleur: { label: 'Kleur', opts: CABS, def: 'oak' }, vulling: { label: 'Inhoud', opts: [['tomaat', 'Kistjes tomaten'], ['dozen', 'Archiefdozen'], ['leeg', 'Leeg']], def: 'tomaat' } },
+    build: v => { const L = +v.breed / 100, D = 0.4, H = 1.9, k = v.kleur; for (const x of [-L / 2, L / 2 - 0.025]) box(k, x, -D / 2, 0, x + 0.025, D / 2, H, { col: true }); box(k, -L / 2, D / 2 - 0.01, 0, L / 2, D / 2, H);
+      const lv = [0.05, 0.5, 0.95, 1.4, 1.875]; lv.forEach(z => box(k, -L / 2, -D / 2, z, L / 2, D / 2, z + 0.025)); colliderLocal(-L / 2, -D / 2, L / 2, D / 2, 0, H);
+      if (v.vulling === 'leeg') return; let n = 0; for (const z of lv.slice(0, 4)) for (let x = -L / 2 + 0.05; x + 0.4 <= L / 2 - 0.03; x += 0.44) { if (v.vulling === 'tomaat') itemCrate(x, -0.15, z + 0.025, n++ % TOMATO.length); else box(['white', 'carton', 'white'][n++ % 3], x, -0.16, z + 0.025, x + 0.38, 0.17, z + 0.34); } } },
+  { id: 'lockers', cat: 'Opbergen', name: 'Lockerkast', icon: 'M4 3h16v18H4zM9 3v18M14 3v18',
+    props: { breed: { label: 'Vakken', opts: [['3', '3 vakken'], ['6', '6 vakken'], ['9', '9 vakken']], def: '6' }, kleur: { label: 'Kleur', opts: [['fabric2', 'Grijs'], ['anthracite', 'Antraciet'], ['white', 'Wit'], ['oak', 'Eiken']], def: 'fabric2' } },
+    build: v => { const n = +v.breed, L = n * 0.3; box(v.kleur, -L / 2, -0.25, 0.1, L / 2, 0.25, 1.9, { col: true }); box('black', -L / 2, -0.24, 0, L / 2, 0.25, 0.1);
+      for (let i = 1; i < n; i++) box('black', -L / 2 + i * 0.3 - 0.003, -0.252, 0.12, -L / 2 + i * 0.3 + 0.003, -0.25, 1.88); box('black', -L / 2, -0.252, 0.99, L / 2, -0.25, 1.0); } },
+  { id: 'tv', cat: 'Presentatie', name: 'Tv-scherm', icon: 'M3 5h18v11H3zM12 16v4M8 20h8',
+    props: { inch: { label: 'Formaat', opts: [['55', '55 inch'], ['65', '65 inch'], ['75', '75 inch'], ['86', '86 inch'], ['98', '98 inch']], def: '75' }, montage: { label: 'Montage', opts: [['standaard', 'Verrijdbare standaard'], ['wand', 'Aan de wand']], def: 'standaard' } },
+    build: v => screenTV(+v.inch, v.montage === 'wand') },
+  { id: 'whiteboard', cat: 'Presentatie', name: 'Whiteboard', icon: 'M3 4h18v12H3zM7 16l-2 5M17 16l2 5',
+    props: { maat: { label: 'Formaat', opts: [['150', '1,5 × 1,0 m'], ['200', '2,0 × 1,2 m']], def: '150' }, montage: { label: 'Montage', opts: [['standaard', 'Op standaard'], ['wand', 'Aan de wand']], def: 'standaard' } },
+    build: v => { const [w, h] = v.maat === '200' ? [2.0, 1.2] : [1.5, 1.0], zc = 1.45; box('alu', -w / 2 - 0.02, -0.025, zc - h / 2 - 0.02, w / 2 + 0.02, 0.0, zc + h / 2 + 0.02); box('sanitary', -w / 2, -0.03, zc - h / 2, w / 2, -0.025, zc + h / 2); box('alu', -w / 2, -0.09, zc - h / 2 - 0.05, w / 2, -0.02, zc - h / 2 - 0.02);
+      if (v.montage === 'standaard') { for (const x of [-w / 2 - 0.05, w / 2 + 0.02]) { box('alu', x, -0.02, 0.05, x + 0.03, 0.02, zc + h / 2); box('alu', x - 0.2, -0.3, 0.02, x + 0.23, 0.3, 0.05); } colliderLocal(-w / 2 - 0.25, -0.3, w / 2 + 0.25, 0.3, 0, 2); } } },
+  { id: 'presentatie', cat: 'Presentatie', name: 'Tomatenpresentatie', icon: 'M3 12h18M5 12v7M19 12v7M8 9a1.5 1.5 0 1 0 0.1 0M13 9a1.5 1.5 0 1 0 0.1 0',
+    props: { maat: { label: 'Formaat', opts: [['120', 'Tafel 1,2 m'], ['180', 'Tafel 1,8 m'], ['trap', 'Getrapt schap 1,8 m']], def: '180' }, kleur: { label: 'Kleur meubel', opts: [['oak', 'Eiken'], ['white', 'Wit'], ['anthracite', 'Antraciet']], def: 'oak' } },
+    build: v => { const L = v.maat === '120' ? 1.2 : 1.8, k = v.kleur; let n = 0;
+      if (v.maat === 'trap') { for (let s = 0; s < 3; s++) { const y0 = -0.45 + s * 0.3, z = 0.55 + s * 0.3; box(k, -L / 2, y0, 0, L / 2, y0 + 0.3, z, { col: true }); for (let x = -L / 2 + 0.03; x + 0.4 <= L / 2; x += 0.44) itemCrate(x, y0, z, n++ % TOMATO.length, 0.4, 0.28); } return; }
+      box(k, -L / 2, -0.4, 0.86, L / 2, 0.4, 0.9, { col: true }); box(k, -L / 2, -0.4, 0, -L / 2 + 0.05, 0.4, 0.86); box(k, L / 2 - 0.05, -0.4, 0, L / 2, 0.4, 0.86);
+      for (let x = -L / 2 + 0.04; x + 0.4 <= L / 2; x += 0.44) for (const y of [-0.36, 0.04]) itemCrate(x, y, 0.9, n++ % TOMATO.length); } },
+  { id: 'koffie', cat: 'Keuken', name: 'Koffiecorner', icon: 'M4 10h16v10H4zM8 4h5v6H8z',
+    props: { front: { label: 'Front', opts: CABS, def: 'white' }, blad: { label: 'Werkblad', opts: [['stone', 'Natuursteen grijs'], ['marble', 'Wit marmer'], ['oak', 'Eiken'], ['concreteTop', 'Beton']], def: 'stone' }, breed: { label: 'Breedte', opts: [['180', '1,8 m'], ['240', '2,4 m'], ['300', '3,0 m']], def: '240' } },
+    build: v => { const L = +v.breed / 100; box(v.front, -L / 2, -0.3, 0.1, L / 2, 0.3, 0.89, { col: true }); box('black', -L / 2 + 0.03, -0.27, 0, L / 2 - 0.03, 0.3, 0.1); box(v.blad, -L / 2 - 0.02, -0.32, 0.89, L / 2 + 0.02, 0.3, 0.92);
+      box('black', -L / 2 + 0.2, -0.05, 0.92, -L / 2 + 0.55, 0.25, 1.4); box('chrome', -L / 2 + 0.3, -0.07, 1.0, -L / 2 + 0.45, -0.05, 1.12); box(v.front, -L / 2, 0.0, 1.5, L / 2, 0.3, 2.2); box('black', -L / 2, -0.001, 1.49, L / 2, 0.3, 1.5);
+      const n = Math.round(L / 0.6); for (let i = 1; i < n; i++) { const x = -L / 2 + L * i / n; box('black', x - 0.003, -0.302, 0.12, x + 0.003, -0.3, 0.87); } cyl('inox', 0.012, 0.3, L / 4, 0.18, 0.92, 8); } },
+  { id: 'koelkast', cat: 'Keuken', name: 'Koelkast', icon: 'M7 3h10v18H7zM7 10h10M9 6v2M9 12v3',
+    props: { type: { label: 'Uitvoering', opts: [['inox', 'RVS'], ['white', 'Wit'], ['glas', 'Glazen deur (drankkoeling)']], def: 'inox' } },
+    build: v => { const k = v.type === 'glas' ? 'black' : v.type; box(k, -0.3, -0.33, 0, 0.3, 0.33, 1.85, { col: true }); box('black', -0.3, -0.335, 1.2, 0.3, -0.33, 1.21);
+      if (v.type === 'glas') { box('glass', -0.26, -0.34, 0.1, 0.26, -0.335, 1.8); box('led', -0.25, 0.25, 0.1, 0.25, 0.27, 1.8); for (const z of [0.5, 0.9, 1.3]) for (let x = -0.22; x < 0.24; x += 0.075) cyl(['tom0', 'tom3', 'tom1', 'tom7'][Math.round((x + 0.3) * 13) % 4], 0.03, 0.2, x, -0.05, z, 10); }
+      else box('chrome', 0.22, -0.36, 0.8, 0.24, -0.335, 1.15); } },
+  { id: 'plant', cat: 'Groen', name: 'Kamerplant', icon: 'M12 21v-8M12 13c-4 0-6-3-6-7 4 0 6 3 6 7zM12 13c4 0 6-3 6-7-4 0-6 3-6 7zM8 21h8',
+    props: { maat: { label: 'Formaat', opts: [['1', 'Middel'], ['1.5', 'Groot'], ['2', 'Extra groot']], def: '1.5' }, pot: { label: 'Pot', opts: [['pot', 'Antraciet'], ['white', 'Wit'], ['carton', 'Terracotta']], def: 'pot' } },
+    build: v => bigPlant(+v.maat, v.pot) },
+  { id: 'tomaatplant', cat: 'Groen', name: 'Tomatenplanten in bak', icon: 'M4 15h16v5H4zM8 15V7M12 15V5M16 15V7',
+    props: { lengte: { label: 'Lengte', opts: [['120', '1,2 m'], ['240', '2,4 m']], def: '120' } },
+    build: v => { const L = +v.lengte / 100; box('anthracite', -L / 2, -0.25, 0, L / 2, 0.25, 0.4, { col: true }); box('foil', -L / 2 + 0.03, -0.22, 0.4, L / 2 - 0.03, 0.22, 0.41);
+      for (let x = -L / 2 + 0.25, i = 0; x < L / 2 - 0.1; x += 0.4, i++) { cyl('trunk', 0.008, 1.3, x, 0, 0.4, 5); for (let k = 0; k < 7; k++) { const yaw = k * 2.4 + i, up = 0.6 + k * 0.15; const pl = new THREE.PlaneGeometry(0.16, 0.34); pl.translate(0, 0.17, 0); pl.rotateX(-0.9); pl.rotateY(yaw); pl.translate(x, up, 0); addGeo('bigLeaf', pl); }
+        for (let k = 0; k < 4; k++) fruit(k % 2 ? 0 : 3, x + Math.cos(k * 1.7 + i) * 0.07, Math.sin(k * 1.7 + i) * 0.07, 0.8 + (k % 3) * 0.12, 0.035); } } },
+  { id: 'wand', cat: 'Wanden en deuren', name: 'Nieuwe wand', icon: 'M3 4h4v16H3zM7 4h14v3H7z',
+    props: { lengte: { label: 'Lengte', opts: [['100', '1 m'], ['200', '2 m'], ['300', '3 m'], ['400', '4 m'], ['500', '5 m'], ['600', '6 m'], ['800', '8 m']], def: '300' }, type: { label: 'Wand', opts: WALL_TYPES.filter(t => t[0] !== 'weg'), def: 'stuc' }, deur: { label: 'Deur', opts: ADD_DOOR, def: 'geen' }, hoogte: { label: 'Hoogte', opts: [['300', 'Tot plafond (3,0 m)'], ['210', 'Lage wand (2,1 m)'], ['120', 'Borstwering (1,2 m)']], def: '300' } },
+    build: v => { const L = +v.lengte / 100, H = +v.hoogte / 100, ds = v.deur === 'geen' || H < 2.3 ? [] : [[-0.45, 0.45, 0, 2.3]];
+      if (v.type === 'glas') glassWall(-L / 2, 0, L / 2, 0, 0, H, ds.map(d => [d[0], d[1]]));
+      else if (v.type === 'half' && H > 1.6) wall('plaster', -L / 2, 0, L / 2, 0, 0, H, PT, [...ds.map(d => [...d, 'door']), ...bandOps(-L / 2, L / 2, ds, 1.0, H - 0.1)], { plan: false });
+      else { wall('plaster', -L / 2, 0, L / 2, 0, 0, H, PT, ds.map(d => [...d, 'door']), { plan: false }); if (v.type === 'akoestisch') for (const s of [-1, 1]) { let cur = -L / 2; for (const d of ds.concat([[L / 2, L / 2]])) { if (d[0] - cur > 0.05) box('feltGreen', cur, s * PT / 2, 0, d[0], s * (PT / 2 + 0.03), H); cur = d[1]; } } }
+      if (ds.length && v.deur !== 'geen') doorLeaf(true, 0, -0.45, 0.45, 0, 2.3, v.deur === 'glas' ? 'glas' : v.deur); } },
+  { id: 'stelling', cat: 'Magazijn', name: 'Palletstelling', icon: 'M4 3v18M20 3v18M4 9h16M4 15h16',
+    props: { lengte: { label: 'Lengte', opts: [['270', '1 vak (2,7 m)'], ['540', '2 vakken (5,4 m)'], ['810', '3 vakken (8,1 m)']], def: '540' }, lagen: { label: 'Hoogte', opts: [['2', '2 laden'], ['3', '3 laden']], def: '3' } },
+    build: v => { const L = +v.lengte / 100, n = +v.lagen, D = 1.1, H = n * 1.3; let k = 0;
+      for (let x = -L / 2; x <= L / 2 + 1e-3; x += 2.7) for (const y of [-D / 2, D / 2 - 0.08]) box('blue', x - 0.04, y, 0, x + 0.04, y + 0.08, H + 0.2);
+      for (let i = 0; i < n; i++) { const z = 0.15 + i * 1.3; for (const y of [-D / 2, D / 2 - 0.1]) box('orange', -L / 2, y, z, L / 2, y + 0.1, z + 0.1);
+        for (let x = -L / 2 + 0.1; x + 1.2 <= L / 2; x += 1.32) { if ((k++ * 7) % 5 === 3) continue; box('pallet', x, -0.4, z + 0.1, x + 1.2, 0.4, z + 0.24); box(['carton', 'crate', 'carton', 'white'][k % 4], x + 0.05, -0.35, z + 0.24, x + 1.15, 0.35, z + 0.24 + 0.6 + (k % 3) * 0.12); } }
+      colliderLocal(-L / 2 - 0.05, -D / 2, L / 2 + 0.05, D / 2, 0, H); } },
+  { id: 'pallet', cat: 'Magazijn', name: 'Pallet met dozen', icon: 'M4 16h16v3H4zM6 8h12v8H6z',
+    props: { hoog: { label: 'Stapel', opts: [['1', '1 pallet'], ['2', '2 pallets']], def: '1' }, lading: { label: 'Lading', opts: [['carton', 'Dozen'], ['crate', 'Groene kratten'], ['white', 'Witte dozen']], def: 'carton' } },
+    build: v => { for (let i = 0; i < +v.hoog; i++) { box('pallet', -0.6, -0.4, i * 0.9, 0.6, 0.4, i * 0.9 + 0.14); box(v.lading, -0.55, -0.35, i * 0.9 + 0.14, 0.55, 0.35, i * 0.9 + 0.84); } colliderLocal(-0.6, -0.4, 0.6, 0.4, 0, +v.hoog * 0.9); } },
+  { id: 'werkbank', cat: 'Magazijn', name: 'Werkbank', icon: 'M3 9h18v3H3zM5 12v8M19 12v8M5 17h14',
+    props: { blad: { label: 'Blad', opts: [['inox', 'RVS'], ['oak', 'Hout'], ['tableWhite', 'Wit']], def: 'inox' }, maat: { label: 'Breedte', opts: [['150', '1,5 m'], ['200', '2,0 m']], def: '200' } },
+    build: v => { const L = +v.maat / 100; box(v.blad, -L / 2, -0.38, 0.86, L / 2, 0.38, 0.9, { col: true }); for (const [x, y] of [[-L / 2 + 0.05, -0.33], [L / 2 - 0.05, -0.33], [-L / 2 + 0.05, 0.33], [L / 2 - 0.05, 0.33]]) box('steel', x - 0.025, y - 0.025, 0, x + 0.025, y + 0.025, 0.86); box('steel', -L / 2 + 0.05, -0.33, 0.2, L / 2 - 0.05, 0.33, 0.23);
+      box('steel', -L / 2, 0.36, 0.9, L / 2, 0.38, 1.6); for (let x = -L / 2 + 0.2; x < L / 2 - 0.1; x += 0.3) box('chrome', x, 0.33, 1.2, x + 0.02, 0.36, 1.35); } },
+];
+const catById = Object.fromEntries(CATALOG.map(c => [c.id, c]));
+
+const ITEMS = new Map(); // id → { id, t, x, y, z, r, v, by, at, group, cols }
+const ICACHE = new Map();
+const IKEY = 'axia-nieuwbouw-inrichting';
+function protoFor(t, v) {
+  const key = t + JSON.stringify(v); let P = ICACHE.get(key); if (P) return P;
+  const cap = capture(() => catById[t].build(v));
+  for (const c of cap.cols) { const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } // lokale coördinaten: niet in de wereld
+  const grp = groupFromCapture(cap);
+  // vangnet: zonder eigen botsvlakken één blok rond de hele vorm
+  if (!cap.cols.length) { const bb = new THREE.Box3().setFromObject(grp); cap.cols.push({ x0: bb.min.x, x1: bb.max.x, y0: -bb.max.z, y1: -bb.min.z, z0: bb.min.y, z1: bb.max.y }); }
+  P = { grp, cols: cap.cols.map(c => ({ ...c })) }; ICACHE.set(key, P); if (ICACHE.size > 160) ICACHE.delete(ICACHE.keys().next().value); return P;
+}
+function itemValues(t, v) { const C = catById[t], o = {}; for (const [k, p] of Object.entries(C.props)) o[k] = (v && p.opts.some(x => x[0] === v[k])) ? v[k] : p.def; return o; }
+function placeItemCols(it) {
+  for (const c of it.cols || []) { const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); }
+  it.cols = [];
+  const P = protoFor(it.t, it.v), a = THREE.MathUtils.degToRad(it.r), ca = Math.cos(a), sa = Math.sin(a);
+  for (const c of P.cols) { const xs = [], ys = []; for (const [x, y] of [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]]) { xs.push(it.x + x * ca - y * sa); ys.push(it.y + x * sa + y * ca); }
+    const w = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), z0: it.z + c.z0, z1: it.z + c.z1, active: true }; colliders.push(w); it.cols.push(w); }
+  colGrid = null;
+}
+function buildItem(it) {
+  if (it.group) scene.remove(it.group);
+  const P = protoFor(it.t, it.v); it.group = P.grp.clone(); it.group.userData.item = it; scene.add(it.group); poseItem(it);
+}
+function poseItem(it, cols = true) { it.group.position.set(it.x, it.z, -it.y); it.group.rotation.y = THREE.MathUtils.degToRad(it.r); it.group.updateMatrixWorld(true); if (cols) placeItemCols(it); shadowDirty = true; }
+function removeItem(it) { if (it.group) scene.remove(it.group); for (const c of it.cols || []) { const i = colliders.indexOf(c); if (i >= 0) colliders.splice(i, 1); } colGrid = null; ITEMS.delete(it.id); shadowDirty = true; }
+function itemDoc(it) { return { t: it.t, x: +it.x.toFixed(3), y: +it.y.toFixed(3), z: +it.z.toFixed(3), r: Math.round(it.r) % 360, v: it.v, room: itemRoom(it), at: new Date().toISOString(), by: it.by || FB.me || null }; }
+function itemRoom(it) { const d = describeSpot(new THREE.Vector3(it.x, it.z + 0.1, -it.y)); return d.place; }
+function loadLocalItems() { try { return JSON.parse(localStorage.getItem(IKEY) || '{}'); } catch (e) { return {}; } }
+async function saveItem(it) {
+  it.pending = true; const doc = itemDoc(it); it.at = doc.at; it.room = doc.room; if (!it.by) it.by = doc.by;
+  try {
+    if (CFG.db) await CFG.db.collection('inrichting').doc(it.id).set(doc);
+    else { const all = loadLocalItems(); all[it.id] = doc; localStorage.setItem(IKEY, JSON.stringify(all)); }
+    cfgMsg(CFG.db ? 'Opgeslagen en gedeeld met iedereen in het project' : 'Bewaard in deze browser');
+  } catch (e) { cfgMsg(e && e.code === 'quota_exceeded' ? 'Opslaan lukt niet: de opslag is vol.' : e && e.code === 'permission_denied' ? 'Je hebt alleen leesrechten; vraag de eigenaar om bewerkrechten.' : 'Opslaan lukte niet. Probeer het nog eens.'); }
+  finally { it.pending = false; }
+  renderOverview();
+}
+async function deleteItem(it) {
+  removeItem(it); if (CFG.sel === it) selectEl(null);
+  try { if (CFG.db) await CFG.db.doc('inrichting/' + it.id).delete(); else { const all = loadLocalItems(); delete all[it.id]; localStorage.setItem(IKEY, JSON.stringify(all)); } cfgMsg('Verwijderd'); } catch (e) { cfgMsg('Verwijderen lukte niet.'); }
+  renderOverview();
+}
+function applyItemDocs(docs) { // docs: { id: doc }
+  for (const [id, it] of [...ITEMS]) if (!docs[id] && !it.pending && !it.placing) removeItem(it);
+  for (const [id, d] of Object.entries(docs)) {
+    if (!catById[d.t]) continue; let it = ITEMS.get(id); const v = itemValues(d.t, d.v);
+    if (it && (it.pending || it === DRAG.it || it.placing)) continue;
+    if (!it) { it = { id, t: d.t, x: d.x, y: d.y, z: d.z || 0, r: d.r || 0, v, by: d.by, at: d.at, room: d.room }; ITEMS.set(id, it); buildItem(it); continue; }
+    const rebuild = it.t !== d.t || JSON.stringify(it.v) !== JSON.stringify(v); Object.assign(it, { t: d.t, x: d.x, y: d.y, z: d.z || 0, r: d.r || 0, v, by: d.by, at: d.at, room: d.room });
+    if (rebuild) buildItem(it); else poseItem(it);
+    if (CFG.sel === it) selectEl(it);
+  }
+  renderOverview();
+}
+async function initItems() {
+  if (CFG.db) { const t = setTimeout(() => cfgMsg('De inrichting is nog niet bereikbaar; ze verschijnt zodra de verbinding er is.'), 10000);
+    CFG.db.collection('inrichting').onSnapshot(snap => { clearTimeout(t); const o = {}; for (const d of snap.docs) o[d.id] = d.data(); applyItemDocs(o); }, err => { clearTimeout(t); if (err && err.code !== 'revoked') cfgMsg('De inrichting kon niet worden geladen.'); }); }
+  else applyItemDocs(loadLocalItems());
+}
+function newId() { try { if (CFG.db) return CFG.db.collection('inrichting').doc().id; } catch (e) { } return 'l' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+
+/* ---------- plaatsen en verslepen ---------- */
+const PLACE = { it: null, rot: 0 }, DRAG = { it: null, dx: 0, dy: 0, moved: false, eatClick: false };
+const ghostRing = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.24, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf2a541, transparent: true, opacity: 0.9, depthTest: false }));
+ghostRing.renderOrder = 10; ghostRing.visible = false; scene.add(ghostRing);
+function placePoint(cx, cy) {
+  const p = floorPick(cx, cy); if (!p) return null;
+  let z = p.h; if (z > FL1 - 0.3) z = FL1; else if (z > 0.25) z = 0; else if (z < -0.35) z = -0.3;
+  return { x: p.x, y: p.y, z };
+}
+const snap = (v, s = 0.05) => Math.round(v / s) * s;
+function startPlace(t, v, from) {
+  if (!FB.canWrite) { cfgMsg('Je hebt alleen leesrechten.'); return; }
+  cancelPlace(); if (mode === 'tour' || mode === 'none') setMode('orbit');
+  const it = { id: newId(), t, v: itemValues(t, v), x: 0, y: 0, z: 0, r: from ? from.r : 0, placing: true, by: FB.me || null };
+  const p = placePoint(innerWidth / 2, innerHeight * 0.55) || (mode === 'walk' ? { x: player.x + Math.sin(player.yaw) * 2, y: player.y + Math.cos(player.yaw) * 2, z: player.feet } : { x: orbit.target.x, y: -orbit.target.z, z: 0 });
+  Object.assign(it, from ? { x: from.x + 0.6, y: from.y - 0.6, z: from.z } : { x: snap(p.x), y: snap(p.y), z: p.z });
+  ITEMS.set(it.id, it); buildItem(it); PLACE.it = it; PLACE.restore = null; document.body.classList.add('placing'); if (!CFG.on) setEdit(true); CFG.tab = 'aanpassen'; selectEl(it);
+}
+function cancelPlace() { if (!PLACE.it) return; const it = PLACE.it; PLACE.it = null; const R = PLACE.restore; PLACE.restore = null; if (R) { Object.assign(it, R); it.placing = false; poseItem(it); document.body.classList.remove('placing'); ghostRing.visible = false; selectEl(it); return; } removeItem(it); document.body.classList.remove('placing'); ghostRing.visible = false; if (CFG.sel === it) selectEl(null); }
+function commitPlace() { const it = PLACE.it; if (!it) return; PLACE.it = null; PLACE.restore = null; it.placing = false; document.body.classList.remove('placing'); ghostRing.visible = false; poseItem(it); saveItem(it); selectEl(it); }
+function rotateItem(it, d) { it.r = ((it.r + d) % 360 + 360) % 360; poseItem(it, !it.placing); if (CFG.sel === it) hlSel.box.setFromObject(it.group).expandByScalar(0.04); if (!it.placing) saveItem(it); }
+function followPointer(it, cx, cy, dx = 0, dy = 0, fine = false) {
+  const p = placePoint(cx, cy); if (!p) return;
+  it.x = fine ? p.x - dx : snap(p.x - dx); it.y = fine ? p.y - dy : snap(p.y - dy); it.z = p.z; poseItem(it, false);
+  ghostRing.position.set(it.x, it.z + 0.02, -it.y); ghostRing.visible = true;
+  hlSel.box.setFromObject(it.group).expandByScalar(0.04); hlSel.visible = true;
+}
+function itemAt(cx, cy) { const r = cv.getBoundingClientRect(); floorNdc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1); floorRc.setFromCamera(floorNdc, camera); floorRc.far = 150;
+  const hit = floorRc.intersectObjects([...ITEMS.values()].filter(i => i.group).map(i => i.group), true).find(h => h.point.y <= CLIP[0].constant + 0.01); if (!hit) return null; let o = hit.object; while (o && !o.userData.item) o = o.parent; return o ? o.userData.item : null; }
+cv.addEventListener('pointermove', e => { if (PLACE.it) { followPointer(PLACE.it, e.clientX, e.clientY, 0, 0, e.altKey); return; }
+  if (DRAG.it && e.pointerId === DRAG.id) { DRAG.moved = DRAG.moved || Math.hypot(e.clientX - DRAG.sx, e.clientY - DRAG.sy) > 4; if (DRAG.moved) followPointer(DRAG.it, e.clientX, e.clientY, DRAG.dx, DRAG.dy, e.altKey); } }, true);
+cv.addEventListener('pointerdown', e => {
+  if (!CFG.on || PLACE.it || e.button > 0) return;
+  const sel = CFG.sel && ITEMS.get(CFG.sel.id) === CFG.sel ? CFG.sel : null; if (!sel || !FB.canWrite) return;
+  if (itemAt(e.clientX, e.clientY) !== sel) return;
+  const p = placePoint(e.clientX, e.clientY); if (!p) return;
+  e.stopImmediatePropagation(); e.preventDefault(); orbit.enabled = false; try { cv.setPointerCapture(e.pointerId); } catch (er) { }
+  Object.assign(DRAG, { it: sel, id: e.pointerId, dx: p.x - sel.x, dy: p.y - sel.y, sx: e.clientX, sy: e.clientY, moved: false });
+}, true);
+cv.addEventListener('pointerup', e => {
+  if (!DRAG.it || e.pointerId !== DRAG.id) return; const it = DRAG.it; DRAG.it = null; orbit.enabled = true; ghostRing.visible = false;
+  if (DRAG.moved) { DRAG.eatClick = true; placeItemCols(it); saveItem(it); }
+}, true);
+cv.addEventListener('click', e => { if (DRAG.eatClick) { DRAG.eatClick = false; e.stopImmediatePropagation(); return; } if (PLACE.it) { e.stopImmediatePropagation(); followPointer(PLACE.it, e.clientX, e.clientY, 0, 0, e.altKey); commitPlace(); } }, true);
+addEventListener('keydown', e => {
+  if (!CFG.on || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return;
+  const it = PLACE.it || (CFG.sel && ITEMS.get(CFG.sel.id) === CFG.sel ? CFG.sel : null); if (!it) return;
+  if (e.code === 'KeyR') { e.preventDefault(); rotateItem(it, e.shiftKey ? 15 : 90); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !PLACE.it && FB.canWrite) { e.preventDefault(); deleteItem(it); }
+  if (e.key === 'Escape' && PLACE.it) { e.stopImmediatePropagation(); cancelPlace(); renderCfg(); }
+  if (e.key === 'Enter' && PLACE.it) { e.preventDefault(); commitPlace(); }
+}, true);
 
 /* ---------- loop ---------- */
 const clock = new THREE.Clock();
@@ -2529,10 +2943,11 @@ async function boot() {
   setTimeout(() => $('#loader')?.classList.add('out'), 250);
   window.__ready = true;
   initFeedback().catch(() => { FB.local = true; FB.items = loadLocal(); renderList(); }).finally(() => initCfg());
-  { const sel = $('#cfgPick'); const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Kies een element…'; sel.appendChild(o0); for (const e of ELS) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; sel.appendChild(o); } }
+  { const sel = $('#cfgPick'); const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Kies een element…'; sel.appendChild(o0); const grpOf = e => e.id.startsWith('wand-') ? 'Binnenwanden en deuren' : e.id.startsWith('gevel') || e.id === 'luifel' ? 'Gevels, ramen en dak' : 'Inrichting en afwerking';
+    for (const g of ['Binnenwanden en deuren', 'Gevels, ramen en dak', 'Inrichting en afwerking']) { const og = document.createElement('optgroup'); og.label = g; for (const e of ELS.filter(x => grpOf(x) === g)) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; og.appendChild(o); } sel.appendChild(og); } }
 }
 boot().catch(err => { $('#ldtxt').textContent = 'Het 3D-model kon niet laden: ' + err.message + '. Probeer een recente versie van Chrome, Edge, Safari of Firefox.'; console.error(err); });
-window.__dbg = { findPath, setWalkTarget, get walkTarget() { return walkTarget; }, M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
+window.__dbg = { orbit, ELS, ITEMS, selectEl: x => selectEl(x), place(t, x, y, z, r, v) { const it = { id: newId(), t, v: itemValues(t, v), x, y, z, r }; ITEMS.set(it.id, it); buildItem(it); saveItem(it); return it.id; }, setWall(id, wand, deur) { const e = elById[id]; e.values.wand = wand; if (deur) e.values.deur = deur; buildEl(e, false); }, findPath, setWalkTarget, get walkTarget() { return walkTarget; }, M, T, scene, pickScene: (...a) => pickScene(...a), FB, pickAt(x, y, h, tx, ty, th) { const rc = new THREE.Raycaster(W(x, y, h), W(tx, ty, th).sub(W(x, y, h)).normalize()); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + '@' + i.point.toArray().map(v => v.toFixed(2)).join(',')); }, setMode, applyPreset, setCut, teleport, player, camera, get tourT() { return tourT; }, set tourT(v) { tourT = v; } };
 </script>
 </body>
 </html>
